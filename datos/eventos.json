@@ -27,10 +27,10 @@
  },
  {
   "fecha": "2025-07-31",
-  "mes": "2025-07",
+  "mes": "2025-08",
   "tipo": "retenciones",
   "titulo": "Baja permanente anunciada en la Rural (Decreto 526/2025)",
-  "detalle": "Soja 33%→26%, maíz y sorgo 12%→9,5%, girasol y carnes también bajan. Rige desde el día siguiente a la publicación.",
+  "detalle": "Soja 33%→26%, maíz y sorgo 12%→9,5%, girasol y carnes también bajan. Rige desde el día siguiente a la publicación. Rige desde el 1/8, por eso julio-2025 todavia pago 33%.",
   "alicuotas": {
    "soja": 26,
    "maiz": 9.5,

@@ -129,6 +129,19 @@ polyline.serie{stroke-dasharray:1;stroke-dashoffset:1;
 .tip .r.foco span,.tip .r.foco b{color:var(--ink);font-weight:700}
 .tip .pt{width:9px;height:3px;border-radius:2px;flex:none}
 
+.cinta-ret{font-size:9.5px;font-weight:700}
+.marca-dec{cursor:help}
+.tira-tc{font-size:9.5px}
+.ov-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ov-chips .et{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--ink-3);font-weight:700;margin-right:2px}
+.ov{font:inherit;font-size:.73rem;border:1px solid var(--line-2);background:var(--sup);
+  color:var(--ink-2);padding:3px 10px;border-radius:20px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px}
+.ov i{width:9px;height:9px;border-radius:2px;background:var(--line-2);flex:none}
+.ov[aria-pressed="true"]{border-color:var(--jd);color:var(--jd);font-weight:650;
+  background:var(--jd-cl)}
+.ov[aria-pressed="true"] i{background:var(--amarillo)}
 .leyenda{display:flex;flex-wrap:wrap;gap:5px;margin-top:12px;
   padding-top:12px;border-top:1px solid var(--line)}
 .ly{font:inherit;font-size:.73rem;border:1px solid var(--line-2);background:var(--sup);
@@ -233,6 +246,12 @@ footer{margin-top:52px;padding-top:15px;border-top:1px solid var(--line);
       Pasá el mouse por el gráfico para aislar una línea, y usá la leyenda de abajo
       para apagar las que no te interesen.</p>
     <div class="barra" id="ctrl"></div>
+    <div class="ov-chips" id="ov-chips" style="margin:-4px 0 12px">
+      <span class="et">Proyectar sobre el gráfico</span>
+      <button class="ov" type="button" data-ov="decretos" aria-pressed="true"><i></i>Decretos</button>
+      <button class="ov" type="button" data-ov="retenciones" aria-pressed="true"><i></i>Retenciones</button>
+      <button class="ov" type="button" data-ov="tc" aria-pressed="false"><i></i>Dólar mayorista</button>
+    </div>
     <div class="panel">
       <div class="chart-tit" id="chart-tit"></div>
       <div class="chart-sub" id="chart-sub"></div>
@@ -297,7 +316,8 @@ const S = {
   desde:null, hasta:null,
   apagadas:{},        /* seg|key -> true */
   foco:null,
-  indicador:"badlar",
+  indicador:"retenciones",
+  ov:{decretos:true, retenciones:true, tc:false},
 };
 
 /* ==================== tablas en crudo ==================== */
@@ -373,7 +393,14 @@ function dibujar(){
     document.getElementById("variaciones").innerHTML=""; pintarLeyenda(); return;
   }
 
-  const W=1000,H=330,mL=48,mR=26,mT=16,mB=30, iw=W-mL-mR, ih=H-mT-mB;
+  const hayEv = IND && IND.eventos && IND.eventos.length;
+  const cinta = (S.ov.retenciones && hayEv) ? 19 : 0;   // alto de la cinta de retenciones
+  const tira  = S.ov.tc && IND && IND.series && IND.series.tc ? 48 : 0;
+  const W=1000, mL=48, mR=26, mT=16, mB=30;
+  const H = 300 + cinta + tira;
+  const iw = W-mL-mR;
+  const mT2 = mT + cinta;
+  const ih = H - mT2 - mB - tira;
   const x = i => mL + i*iw/(E.length-1);
 
   let maxV=0, minV=0;
@@ -390,14 +417,14 @@ function dibujar(){
   const paso = pasoLindo(Math.max(4,maxV*1.12)/5);
   const topN = paso*Math.max(1,Math.ceil(Math.max(4,maxV*1.02)/paso));
   const botN = minV<0 ? -paso*Math.ceil(Math.abs(minV*1.15)/paso) : 0;
-  const y = v => mT+ih-((v-botN)/(topN-botN))*ih;
+  const y = v => mT2+ih-((v-botN)/(topN-botN))*ih;
 
   let grid="", etY="";
   for(let v=botN; v<=topN+1e-9; v+=paso){
     grid += '<line x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--line)"/>';
     etY += '<text x="'+(mL-9)+'" y="'+(y(v)+4)+'" text-anchor="end" fill="var(--ink-3)" font-size="11">'+v+'</text>';
   }
-  etY += '<text x="'+(mL-9)+'" y="'+(mT-4)+'" text-anchor="end" fill="var(--ink-3)" '
+  etY += '<text x="'+(mL-9)+'" y="'+(mT2-4)+'" text-anchor="end" fill="var(--ink-3)" '
        + 'font-size="10" font-weight="600">unid.</text>';
 
   // bandas suaves alternadas por anio fiscal: dan profundidad y ubican el ejercicio
@@ -408,7 +435,7 @@ function dibujar(){
       const x0 = ini===0 ? mL : (x(ini)+x(ini-1))/2;
       const x1 = i===E.length-1 ? W-mR : (x(i)+x(i+1))/2;
       const par = (e.fy.charCodeAt(e.fy.length-1)) % 2 === 0;
-      if(par) bandas += '<rect class="fy-banda" x="'+x0+'" y="'+mT+'" width="'+(x1-x0)
+      if(par) bandas += '<rect class="fy-banda" x="'+x0+'" y="'+mT2+'" width="'+(x1-x0)
         +'" height="'+ih+'" fill="var(--ink)" opacity=".025"/>';
       ini = i+1;
     }
@@ -417,8 +444,8 @@ function dibujar(){
   let fy="", etX="";
   E.forEach(function(e,i){
     if(i>0 && e.fy!==E[i-1].fy){
-      fy += '<line x1="'+x(i)+'" x2="'+x(i)+'" y1="'+mT+'" y2="'+(mT+ih)+'" stroke="var(--line-2)" stroke-dasharray="3 3"/>'
-          + '<text x="'+(x(i)+5)+'" y="'+(mT+11)+'" fill="var(--ink-3)" font-size="10.5" font-weight="700">'+esc(e.fy)+'</text>';
+      fy += '<line x1="'+x(i)+'" x2="'+x(i)+'" y1="'+mT2+'" y2="'+(mT2+ih)+'" stroke="var(--line-2)" stroke-dasharray="3 3"/>'
+          + '<text x="'+(x(i)+5)+'" y="'+(mT2+11)+'" fill="var(--ink-3)" font-size="10.5" font-weight="700">'+esc(e.fy)+'</text>';
     }
     const cada = E.length>14?2:1;
     if(i%cada===0 || i===E.length-1){
@@ -440,15 +467,91 @@ function dibujar(){
     }).join("");
   }).join("");
 
+  // ---- cinta de regimenes de retenciones, arriba del area de dibujo ----
+  let cintaSVG = "";
+  if(cinta){
+    const cortes = [];
+    (IND.eventos||[]).forEach(function(ev){
+      if(ev.solo_evento || !ev.alicuotas || ev.alicuotas.soja==null) return;
+      const i = E.findIndex(function(p){ return p.clave===ev.mes; });
+      if(i>0) cortes.push({i:i, tasa:ev.alicuotas.soja});
+    });
+    // Dos decretos pueden caer en el mismo mes (jul-2025: el 439 sube y el 526
+    // baja): manda el ultimo. Y un decreto puede no tocar la soja (423/2026),
+    // asi que no corta la cinta aunque si aparezca su marca vertical.
+    const limpios = [];
+    cortes.forEach(function(c){
+      if(limpios.length && limpios[limpios.length-1].i===c.i) limpios.pop();
+      limpios.push(c);
+    });
+    let desde = 0, tasa = alicuotaSoja(E[0].clave), n = 0;
+    const pinta = function(a, b, t){
+      const x0 = a===0 ? mL : (x(a)+x(a-1))/2;
+      const x1 = b>=E.length-1 ? W-mR : (x(b)+x(b+1))/2;
+      cintaSVG += '<rect x="'+x0+'" y="'+mT+'" width="'+(x1-x0)+'" height="14" rx="2" '
+        + 'fill="var(--amarillo)" opacity="'+(n%2 ? ".95" : ".62")+'"/>'
+        + '<text class="cinta-ret" x="'+((x0+x1)/2)+'" y="'+(mT+10.5)
+        + '" text-anchor="middle" fill="#4a3d00">'+num(t,0)+'%</text>';
+      n++;
+    };
+    limpios.forEach(function(c){
+      if(c.tasa===tasa) return;              // el decreto no movio la soja
+      pinta(desde, c.i-1, tasa); desde=c.i; tasa=c.tasa;
+    });
+    pinta(desde, E.length-1, tasa);
+    cintaSVG += '<text x="'+(mL-9)+'" y="'+(mT+10.5)+'" text-anchor="end" '
+      + 'fill="var(--ink-3)" font-size="9.5" font-weight="700">DEX soja</text>';
+  }
+
+  // ---- lineas verticales de cada decreto ----
+  let decSVG = "";
+  if(S.ov.decretos && hayEv){
+    (IND.eventos||[]).forEach(function(ev){
+      const i = E.findIndex(function(p){ return p.clave===ev.mes; });
+      if(i<0) return;
+      decSVG += '<g class="marca-dec"><line x1="'+x(i)+'" x2="'+x(i)+'" y1="'+mT2+'" y2="'+(mT2+ih)
+        + '" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="2 4" opacity=".55"/>'
+        + '<circle cx="'+x(i)+'" cy="'+(mT2+5)+'" r="5" fill="var(--amarillo)" '
+        + 'stroke="var(--ink-2)" stroke-width="1"/>'
+        + '<title>'+esc(ev.titulo)+" \u2014 "+esc(ev.detalle)+'</title></g>';
+    });
+  }
+
+  // ---- tira del tipo de cambio, abajo, con su propia escala ----
+  let tcSVG = "";
+  if(tira){
+    const st = IND.series.tc || {};
+    const vs = E.map(function(e){ return st[e.clave]==null ? null : st[e.clave]; });
+    const hay2 = vs.filter(function(v){ return v!=null; });
+    if(hay2.length){
+      const y0 = mT2+ih+mB, alto = tira-14;
+      const mn = Math.min.apply(null,hay2), mx = Math.max.apply(null,hay2);
+      const yy = function(v){ return y0+alto - (v-mn)/((mx-mn)||1)*alto; };
+      let d="", ar="";
+      vs.forEach(function(v,i){ if(v==null) return;
+        d += !d ? "M"+x(i)+","+yy(v) : "L"+x(i)+","+yy(v); });
+      if(d) ar = d+"L"+x(vs.length-1)+","+(y0+alto)+"L"+x(0)+","+(y0+alto)+"Z";
+      tcSVG = '<path d="'+ar+'" fill="var(--jd)" opacity=".10"/>'
+        + '<path d="'+d+'" fill="none" stroke="var(--jd)" stroke-width="1.8" '
+        + 'stroke-linejoin="round"/>'
+        + '<text class="tira-tc" x="'+(mL-9)+'" y="'+(y0+9)+'" text-anchor="end" '
+        + 'fill="var(--ink-3)" font-weight="700">US$</text>'
+        + '<text class="tira-tc" x="'+(mL-9)+'" y="'+(y0+alto)+'" text-anchor="end" '
+        + 'fill="var(--ink-3)">'+num(mn,0)+'</text>'
+        + '<text class="tira-tc" x="'+(W-mR+3)+'" y="'+(yy(vs[vs.length-1])+3)+'" '
+        + 'fill="var(--jd)" font-weight="700">'+num(vs[vs.length-1],0)+'</text>';
+    }
+  }
+
   cont.innerHTML =
     '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Unidades por mes y tipo de máquina">'
-    + bandas + grid + fy
+    + bandas + grid + fy + cintaSVG + decSVG + tcSVG
     + '<line x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(0)+'" y2="'+y(0)+'" stroke="var(--line-2)"/>'
     + etY + etX
     + '<path id="area-foco" d="" fill="none" opacity="0"/>'
     + lineas + '<g id="marcas-foco"></g>' 
-    + '<line id="cruz" x1="0" x2="0" y1="'+mT+'" y2="'+(mT+ih)+'" stroke="var(--ink-3)" stroke-dasharray="3 3" opacity="0"/>'
-    + '<rect x="'+mL+'" y="'+mT+'" width="'+iw+'" height="'+ih+'" fill="transparent" id="cap"/>'
+    + '<line id="cruz" x1="0" x2="0" y1="'+mT2+'" y2="'+(mT2+ih)+'" stroke="var(--ink-3)" stroke-dasharray="3 3" opacity="0"/>'
+    + '<rect x="'+mL+'" y="'+mT2+'" width="'+iw+'" height="'+ih+'" fill="transparent" id="cap"/>'
     + '</svg><div class="tip" id="tip"></div>';
 
   const svg=cont.querySelector("svg"), tip=cont.querySelector("#tip"), cruz=cont.querySelector("#cruz");
@@ -599,12 +702,15 @@ function alicuotaSoja(clave){
   let v=33;
   IND.eventos.forEach(function(e){
     if(e.solo_evento || !e.alicuotas || e.alicuotas.soja==null) return;
-    if(e.fecha.slice(0,7) <= clave) v = e.alicuotas.soja; });
+    if((e.mes || e.fecha.slice(0,7)) <= clave) v = e.alicuotas.soja; });
   return v;
 }
 function catalogoInd(){
   if(!IND) return [];
-  const out = ["badlar","tamar","adelantos","prendarios_usd","documentos_usd","tc"]
+  // 'mostrar' lo define indicadores.py; el resto de las series igual queda en el
+  // JSON, asi volver a mostrar una es agregar su clave alla y nada mas.
+  const lista = IND.mostrar || ["tc"];
+  const out = lista.filter(function(k){ return k!=="retenciones"; })
     .filter(function(k){ return IND.series && IND.series[k]; })
     .map(function(k){ return {key:k,label:IND.meta[k].etiqueta,unidad:IND.meta[k].unidad}; });
   if(IND.eventos && IND.eventos.length)
@@ -786,6 +892,13 @@ function armarControles(){
       document.querySelectorAll("#medida button").forEach(function(o){
         o.setAttribute("aria-pressed", String(o===b)); });
       dibujar(); }; });
+  document.querySelectorAll("#ov-chips [data-ov]").forEach(function(b){
+    b.onclick=function(){
+      S.ov[b.dataset.ov] = !S.ov[b.dataset.ov];
+      b.setAttribute("aria-pressed", String(S.ov[b.dataset.ov]));
+      dibujar();
+    };
+  });
   const dd=document.getElementById("desde"), hh=document.getElementById("hasta");
   dd.onchange=function(){ S.desde=dd.value;
     if(S.desde>S.hasta){ S.hasta=S.desde; hh.value=S.hasta; } dibujar(); };

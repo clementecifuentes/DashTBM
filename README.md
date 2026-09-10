@@ -32,7 +32,20 @@ Una sola página, en dos bloques:
    (desde / hasta), de segmento y de medida (industria o dealer). Debajo se
    calcula la variación entre los meses y los tipos visibles: valor inicial,
    final, Δ en unidades, Δ %, total del rango y promedio mensual.
-3. **Tasas e indicadores** — un botón abre una ventana flotante, que se arrastra
+3. **Proyección sobre el gráfico** — tres interruptores encima del gráfico de
+   ventas:
+   - *Decretos*: línea vertical con un punto amarillo en el mes de cada decreto;
+     el tooltip dice cuál es y qué cambió.
+   - *Retenciones*: cinta arriba del área de dibujo con la alícuota de soja
+     vigente en cada tramo (33% → 26% → 33% → 26% → 24%).
+   - *Dólar mayorista*: tira debajo del eje, alineada mes a mes, con su propia
+     escala.
+
+   La cinta y la tira comparten el eje de meses con las ventas pero **no** el eje
+   vertical. Dibujar el dólar como una línea más dentro del mismo plano sería un
+   gráfico de doble eje: se pueden hacer coincidir dos curvas cualesquiera
+   moviendo las escalas, y ahí la "correlación" la dibuja uno, no los datos.
+4. **Tasas e indicadores** — un botón abre una ventana flotante, que se arrastra
    por su encabezado y se cierra con la × o con Escape. Adentro: el indicador
    elegido en grande con las marcas de cada decreto de retenciones, y abajo una
    grilla con todos los indicadores en miniatura y su último valor. Toma el
@@ -90,9 +103,18 @@ v4.0, sin clave ni registro) y mensualiza:
 | BADLAR privados | 7 | costo de fondeo mayorista, % TNA |
 | TAMAR privados | 44 | plazo fijo mayorista, % TNA |
 | Adelantos en cta. cte. | 13 | capital de trabajo, % TNA |
+| Soja y maíz | FRED/FMI | precio internacional mensual, US$/t |
 | Préstamos prendarios | 113 | stock, la línea con la que se financia maquinaria |
 | Préstamos por documentos | 111 | stock |
 | Tipo de cambio mayorista | 5 | $/US$ |
+
+En la página se muestran solo **retenciones y tipo de cambio**; el resto igual
+se baja y queda guardado en `datos/indicadores.json`, así volver a mostrar una
+serie es agregar su clave a la lista `MOSTRAR` de `indicadores.py` y nada más.
+
+Los precios de granos salen de FRED (series del FMI, sin clave): son precios
+internacionales del golfo de EEUU, **no** la pizarra de Rosario, que no está
+publicada en ninguna API. De ahí se deriva el precio neto de retenciones.
 
 Las tasas se promedian dentro del mes; los stocks se toman al cierre. Los stocks
 además se pasan a dólares: en pesos nominales, con la inflación del período, la
@@ -100,7 +122,9 @@ serie no se puede comparar consigo misma.
 
 Los **derechos de exportación** no salen de ninguna API: están curados a mano en
 `datos/eventos.json`, con decreto, fecha, alícuotas y fuente para cada cambio
-(38/2025, 439/2025, 526/2025, 682/2025, 877/2025, 423/2026). El 0% de
+(38/2025, 439/2025, 526/2025, 682/2025, 877/2025, 423/2026). Cada uno lleva el
+**mes en que rige**, que no siempre es el de publicación: el 526/2025 salió el
+31/7 y rige desde el 1/8, así que julio-2025 todavía pagó 33%. El 0% de
 septiembre de 2025 duró dos días hábiles hasta agotar el cupo de US$ 7.000
 millones, así que va marcado como evento y no como nivel mensual.
 

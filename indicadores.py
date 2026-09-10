@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
 """Baja indicadores publicos y los deja mensualizados en datos/indicadores.json.
 
-Fuente de tasas y credito: API publica del BCRA (Estadisticas Monetarias v4.0),
-https://api.bcra.gob.ar/estadisticas/v4.0/monetarias  -- sin clave ni registro.
+Fuentes, todas publicas y sin clave:
+  * Tasas y credito: API del BCRA (Estadisticas Monetarias v4.0),
+    https://api.bcra.gob.ar/estadisticas/v4.0/monetarias
+  * Precios de granos: series mensuales del FMI publicadas por la Reserva
+    Federal de St. Louis, https://fred.stlouisfed.org (endpoint CSV abierto).
+    OJO: son precios internacionales (golfo de EEUU), NO la pizarra de Rosario.
+    La pizarra no esta publicada en ninguna API: vive en planillas de MAGyP.
 
 Uso:
     python indicadores.py            # baja todo y reescribe datos/indicadores.json
@@ -21,6 +26,17 @@ from datetime import datetime
 BASE = os.path.dirname(os.path.abspath(__file__))
 SALIDA = os.path.join(BASE, "datos", "indicadores.json")
 API = "https://api.bcra.gob.ar/estadisticas/v4.0/monetarias/%d?desde=%s&hasta=%s&limit=3000"
+FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=%s"
+
+# id FRED -> (clave, etiqueta, unidad)
+GRANOS = {
+    "PSOYBUSDM":   ("soja",  "Soja, precio internacional",  "US$/t"),
+    "PMAIZMTUSDM": ("maiz",  "Maíz, precio internacional",  "US$/t"),
+}
+
+# Que se muestra en la pagina. El resto igual se baja y queda en el JSON, asi
+# volver a mostrar una serie es agregar su clave a esta lista y nada mas.
+MOSTRAR = ["retenciones", "tc"]
 
 DESDE = "2024-10-01"   # un mes antes del primer informe TBM
 HASTA = datetime.now().strftime("%Y-%m-%d")
@@ -51,6 +67,44 @@ def bajar(id_var):
     return [(x["fecha"], float(x["valor"])) for x in det]
 
 
+def bajar_fred(id_serie):
+    # FRED corta la conexion con una UA propia; con UA de navegador responde
+    # en menos de un segundo.
+    req = urllib.request.Request(FRED % id_serie, headers={
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Accept": "text/csv,*/*"})
+    with urllib.request.urlopen(req, context=CTX, timeout=40) as r:
+        crudo = r.read().decode("utf-8", "replace")
+    out = {}
+    for linea in crudo.splitlines()[1:]:
+        partes = linea.split(",")
+        if len(partes) < 2:
+            continue
+        fecha, valor = partes[0].strip(), partes[1].strip()
+        if valor in ("", "."):
+            continue
+        try:
+            out[fecha[:7]] = float(valor)
+        except ValueError:
+            pass
+    return out
+
+
+def alicuotas_por_mes(eventos, meses):
+    """Alicuota de cada grano vigente al cierre de cada mes, segun los decretos."""
+    cambios = sorted((e for e in eventos
+                      if not e.get("solo_evento") and e.get("alicuotas")),
+                     key=lambda e: e.get("mes") or e["fecha"][:7])
+    out = {}
+    for m in meses:
+        actual = {"soja": 33.0, "maiz": 12.0, "trigo": 12.0}   # vigentes antes del periodo
+        for e in cambios:
+            if (e.get("mes") or e["fecha"][:7]) <= m:
+                actual.update(e["alicuotas"])
+        out[m] = actual
+    return out
+
+
 def mensualizar(datos, modo):
     por_mes = defaultdict(list)
     for fecha, valor in datos:
@@ -61,6 +115,10 @@ def mensualizar(datos, modo):
         out[mes] = (sum(v for _, v in vs) / len(vs) if modo == "promedio"
                     else vs[-1][1])
     return out
+
+
+def eventos_cargados(base):
+    return os.path.exists(os.path.join(base, "datos", "eventos.json"))
 
 
 def main():
@@ -92,6 +150,36 @@ def main():
                            "modo": meta[orig]["modo"]}
             print("  OK %-11s derivado de %s / tc" % (nueva, orig))
 
+    for id_serie, (clave, etiqueta, unidad) in GRANOS.items():
+        try:
+            series[clave] = {m: v for m, v in bajar_fred(id_serie).items()
+                             if m >= DESDE[:7]}
+        except Exception as e:
+            print("  [!] %s (%s): %s" % (clave, id_serie, e))
+            continue
+        meta[clave] = {"etiqueta": etiqueta, "unidad": unidad,
+                       "id_fred": id_serie, "modo": "mensual"}
+        ms = sorted(series[clave])
+        print("  OK %-11s %s .. %s  (%d meses, FRED/FMI)" % (clave, ms[0], ms[-1], len(ms)))
+
+    # Precio que le queda al productor: internacional menos el derecho de
+    # exportacion vigente. Es una aproximacion: ignora fletes y gastos
+    # comerciales, pero aisla el efecto de los decretos.
+    if eventos_cargados(BASE):
+        eventos_tmp = json.load(open(os.path.join(BASE, "datos", "eventos.json"),
+                                     encoding="utf-8"))
+        for grano in ("soja", "maiz"):
+            if grano not in series:
+                continue
+            alic = alicuotas_por_mes(eventos_tmp, sorted(series[grano]))
+            nueva = grano + "_neto"
+            series[nueva] = {m: v * (1 - alic[m][grano] / 100.0)
+                             for m, v in series[grano].items()}
+            meta[nueva] = {"etiqueta": meta[grano]["etiqueta"].split(",")[0]
+                           + " neto de retenciones (aprox.)",
+                           "unidad": "US$/t", "modo": "derivado"}
+            print("  OK %-11s derivado de %s y las alicuotas" % (nueva, grano))
+
     for clave in series:
         series[clave] = {m: round(v, 2) for m, v in sorted(series[clave].items())}
 
@@ -104,7 +192,8 @@ def main():
 
     with open(SALIDA, "w", encoding="utf-8") as fh:
         json.dump({"series": series, "meta": meta, "eventos": eventos,
-                   "fuente": "BCRA, Estadísticas Monetarias v4.0 (API pública)",
+                   "mostrar": MOSTRAR,
+                   "fuente": "BCRA (Estadísticas Monetarias v4.0) y FMI vía FRED",
                    "bajado": datetime.now().strftime("%Y-%m-%d %H:%M")},
                   fh, ensure_ascii=False, indent=1)
     print("\n-> %s" % SALIDA)

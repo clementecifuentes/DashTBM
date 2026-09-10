@@ -207,6 +207,102 @@
    "2026-07": 16764.6,
    "2026-08": 16995.5,
    "2026-09": 17011.5
+  },
+  "soja": {
+   "2024-10": 368.49,
+   "2024-11": 365.52,
+   "2024-12": 361.24,
+   "2025-01": 377.85,
+   "2025-02": 382.08,
+   "2025-03": 369.34,
+   "2025-04": 378.07,
+   "2025-05": 387.65,
+   "2025-06": 383.52,
+   "2025-07": 374.77,
+   "2025-08": 372.96,
+   "2025-09": 368.57,
+   "2025-10": 371.57,
+   "2025-11": 410.17,
+   "2025-12": 391.55,
+   "2026-01": 383.24,
+   "2026-02": 409.48,
+   "2026-03": 426.6,
+   "2026-04": 425.29,
+   "2026-05": 439.15,
+   "2026-06": 414.54,
+   "2026-07": 442.45
+  },
+  "maiz": {
+   "2024-10": 189.59,
+   "2024-11": 201.31,
+   "2024-12": 202.83,
+   "2025-01": 214.36,
+   "2025-02": 221.25,
+   "2025-03": 207.75,
+   "2025-04": 215.57,
+   "2025-05": 204.81,
+   "2025-06": 195.72,
+   "2025-07": 192.45,
+   "2025-08": 183.02,
+   "2025-09": 196.15,
+   "2025-10": 198.02,
+   "2025-11": 201.66,
+   "2025-12": 205.32,
+   "2026-01": 203.9,
+   "2026-02": 210.64,
+   "2026-03": 213.3,
+   "2026-04": 214.52,
+   "2026-05": 215.62,
+   "2026-06": 195.78,
+   "2026-07": 213.19
+  },
+  "soja_neto": {
+   "2024-10": 246.89,
+   "2024-11": 244.9,
+   "2024-12": 242.03,
+   "2025-01": 279.61,
+   "2025-02": 282.74,
+   "2025-03": 273.31,
+   "2025-04": 279.77,
+   "2025-05": 286.86,
+   "2025-06": 283.81,
+   "2025-07": 251.1,
+   "2025-08": 275.99,
+   "2025-09": 272.75,
+   "2025-10": 274.96,
+   "2025-11": 303.53,
+   "2025-12": 297.58,
+   "2026-01": 291.26,
+   "2026-02": 311.2,
+   "2026-03": 324.21,
+   "2026-04": 323.22,
+   "2026-05": 333.75,
+   "2026-06": 315.05,
+   "2026-07": 336.26
+  },
+  "maiz_neto": {
+   "2024-10": 166.84,
+   "2024-11": 177.15,
+   "2024-12": 178.49,
+   "2025-01": 194.0,
+   "2025-02": 200.24,
+   "2025-03": 188.02,
+   "2025-04": 195.09,
+   "2025-05": 185.35,
+   "2025-06": 177.13,
+   "2025-07": 169.36,
+   "2025-08": 165.64,
+   "2025-09": 177.51,
+   "2025-10": 179.21,
+   "2025-11": 182.5,
+   "2025-12": 187.86,
+   "2026-01": 186.57,
+   "2026-02": 192.73,
+   "2026-03": 195.17,
+   "2026-04": 196.29,
+   "2026-05": 197.29,
+   "2026-06": 179.14,
+   "2026-07": 195.07
   }
  },
  "meta": {
@@ -257,6 +353,28 @@
    "unidad": "MUS$",
    "id_bcra": 111,
    "modo": "cierre"
+  },
+  "soja": {
+   "etiqueta": "Soja, precio internacional",
+   "unidad": "US$/t",
+   "id_fred": "PSOYBUSDM",
+   "modo": "mensual"
+  },
+  "maiz": {
+   "etiqueta": "Maíz, precio internacional",
+   "unidad": "US$/t",
+   "id_fred": "PMAIZMTUSDM",
+   "modo": "mensual"
+  },
+  "soja_neto": {
+   "etiqueta": "Soja neto de retenciones (aprox.)",
+   "unidad": "US$/t",
+   "modo": "derivado"
+  },
+  "maiz_neto": {
+   "etiqueta": "Maíz neto de retenciones (aprox.)",
+   "unidad": "US$/t",
+   "modo": "derivado"
   }
  },
  "eventos": [
@@ -288,10 +406,10 @@
   },
   {
    "fecha": "2025-07-31",
-   "mes": "2025-07",
+   "mes": "2025-08",
    "tipo": "retenciones",
    "titulo": "Baja permanente anunciada en la Rural (Decreto 526/2025)",
-   "detalle": "Soja 33%→26%, maíz y sorgo 12%→9,5%, girasol y carnes también bajan. Rige desde el día siguiente a la publicación.",
+   "detalle": "Soja 33%→26%, maíz y sorgo 12%→9,5%, girasol y carnes también bajan. Rige desde el día siguiente a la publicación. Rige desde el 1/8, por eso julio-2025 todavia pago 33%.",
    "alicuotas": {
     "soja": 26,
     "maiz": 9.5,
@@ -310,7 +428,8 @@
     "maiz": 0,
     "trigo": 0
    },
-   "fuente": "https://www.infobae.com/economia/2025/09/22/los-detalles-del-decreto-que-bajo-a-0-las-retenciones-al-campo/"
+   "fuente": "https://www.infobae.com/economia/2025/09/22/los-detalles-del-decreto-que-bajo-a-0-las-retenciones-al-campo/",
+   "solo_evento": true
   },
   {
    "fecha": "2025-12-12",
@@ -339,6 +458,10 @@
    "fuente": "https://www.infobae.com/economia/2026/06/03/el-gobierno-oficializo-una-reduccion-en-las-retenciones-para-el-agro-y-los-biocombustibles/"
   }
  ],
- "fuente": "BCRA, Estadísticas Monetarias v4.0 (API pública)",
- "bajado": "2026-09-10 12:09"
+ "mostrar": [
+  "retenciones",
+  "tc"
+ ],
+ "fuente": "BCRA (Estadísticas Monetarias v4.0) y FMI vía FRED",
+ "bajado": "2026-09-10 16:02"
 }
