@@ -767,6 +767,12 @@ function alicuotaSoja(clave){
     if((e.mes || e.fecha.slice(0,7)) <= clave) v = e.alicuotas.soja; });
   return v;
 }
+function comoSeMide(cat){
+  if(cat.modo==="cierre")   return " · último valor de cada mes";
+  if(cat.modo==="promedio") return " · promedio de cada mes";
+  return "";
+}
+
 function catalogoInd(){
   if(!IND) return [];
   // 'mostrar' lo define indicadores.py; el resto de las series igual queda en el
@@ -774,7 +780,7 @@ function catalogoInd(){
   const lista = IND.mostrar || ["tc"];
   const out = lista.filter(function(k){ return k!=="retenciones"; })
     .filter(function(k){ return IND.series && IND.series[k]; })
-    .map(function(k){ return {key:k,label:IND.meta[k].etiqueta,unidad:IND.meta[k].unidad}; });
+    .map(function(k){ return {key:k,label:IND.meta[k].etiqueta,unidad:IND.meta[k].unidad,modo:IND.meta[k].modo}; });
   if(IND.eventos && IND.eventos.length)
     out.push({key:"retenciones",label:"Retenciones a la soja",unidad:"%"});
   return out;
@@ -804,7 +810,7 @@ function dibujarFlot(){
   if(!act){ cuerpo.innerHTML = '<p class="nota">Sin indicadores cargados.</p>'; return; }
 
   cuerpo.innerHTML = '<div class="flot-tit">'+esc(act.label)+'</div>'
-    + '<div class="flot-uni">'+esc(act.unidad)+' · promedio de cada mes</div>'
+    + '<div class="flot-uni">'+esc(act.unidad)+esc(comoSeMide(act))+'</div>'
     + masAlla(act, E)
     + '<div id="flot-grande"></div>'
     + '<div class="mini-grid" id="flot-minis"></div>'

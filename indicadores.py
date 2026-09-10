@@ -95,7 +95,7 @@ def bajar_fred(id_serie):
 
 
 def bajar_dolar_oficial():
-    """Cotizacion del Banco Nacion, promedio mensual del tipo vendedor."""
+    """Cotizacion diaria del Banco Nacion, tipo vendedor."""
     req = urllib.request.Request(DOLAR, headers={
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
         "Accept": "application/json"})
@@ -153,10 +153,12 @@ def main():
               % (clave, ms[0], ms[-1], len(ms), len(crudo)))
 
     try:
-        series["oficial"] = mensualizar(bajar_dolar_oficial(), "promedio")
+        # Cierre y no promedio: interesa con que precio termino el mes, que es
+        # contra lo que se compara una cotizacion de hoy.
+        series["oficial"] = mensualizar(bajar_dolar_oficial(), "cierre")
         meta["oficial"] = {"etiqueta": "Dólar oficial Banco Nación (venta)",
                            "unidad": "$/US$", "fuente": "api.argentinadatos.com",
-                           "modo": "promedio"}
+                           "modo": "cierre"}
         ms = sorted(series["oficial"])
         print("  OK %-11s %s .. %s  (%d meses, Banco Nación)"
               % ("oficial", ms[0], ms[-1], len(ms)))

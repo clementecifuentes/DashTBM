@@ -112,16 +112,16 @@ v4.0, sin clave ni registro) y mensualiza:
 | Préstamos prendarios | 113 | stock, la línea con la que se financia maquinaria |
 | Préstamos por documentos | 111 | stock |
 | Tipo de cambio mayorista | 5 | $/US$ (A3500, se usa para pasar los stocks a dólares) |
-| Dólar oficial Banco Nación | argentinadatos | $/US$, tipo vendedor — el que se muestra |
+| Dólar oficial Banco Nación | argentinadatos | $/US$, tipo vendedor, cierre del mes — el que se muestra |
 
 En la página se muestran solo **retenciones y tipo de cambio**; el resto igual
 se baja y queda guardado en `datos/indicadores.json`, así volver a mostrar una
 serie es agregar su clave a la lista `MOSTRAR` de `indicadores.py` y nada más.
 
-El dólar se muestra como **promedio del mes**, y el gráfico termina donde
-termina el último informe TBM. Por eso el valor del borde no coincide con el
-del diario de hoy: en jul-2026 el promedio fue 1.509, mientras que el dato
-diario de sep-2026 es 1.535. Tanto la tira como la ventana dicen de qué mes es
+El dólar se muestra como **último valor de cada mes** (el cierre), y el gráfico
+termina donde termina el último informe TBM. Por eso el valor del borde no
+coincide con el del diario de hoy: jul-2026 cerró en 1.510 y sep-2026 va en
+1.535. Tanto la tira como la ventana dicen de qué mes es
 cada número, y la ventana avisa hasta dónde llega la serie.
 
 El BCRA **no** publica una serie de Banco Nación: su minorista (id 4) es un
@@ -133,7 +133,7 @@ Los precios de granos salen de FRED (series del FMI, sin clave): son precios
 internacionales del golfo de EEUU, **no** la pizarra de Rosario, que no está
 publicada en ninguna API. De ahí se deriva el precio neto de retenciones.
 
-Las tasas se promedian dentro del mes; los stocks se toman al cierre. Los stocks
+Las tasas se promedian dentro del mes; los stocks y el dólar se toman al cierre. Los stocks
 además se pasan a dólares: en pesos nominales, con la inflación del período, la
 serie no se puede comparar consigo misma.
 
