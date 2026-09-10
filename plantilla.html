@@ -250,7 +250,7 @@ footer{margin-top:52px;padding-top:15px;border-top:1px solid var(--line);
       <span class="et">Proyectar sobre el gráfico</span>
       <button class="ov" type="button" data-ov="decretos" aria-pressed="true"><i></i>Decretos</button>
       <button class="ov" type="button" data-ov="retenciones" aria-pressed="true"><i></i>Retenciones</button>
-      <button class="ov" type="button" data-ov="tc" aria-pressed="false"><i></i>Dólar mayorista</button>
+      <button class="ov" type="button" data-ov="tc" aria-pressed="false"><i></i>Dólar oficial</button>
     </div>
     <div class="panel">
       <div class="chart-tit" id="chart-tit"></div>
@@ -376,6 +376,8 @@ function pasoLindo(bruto){
 }
 
 /* ==================== grafico ==================== */
+function hayEventos(){ return !!(IND && IND.eventos && IND.eventos.length); }
+
 function dibujar(){
   const E = eje(), seg = S.segG, cont = document.getElementById("chart-hold");
   const cats = tipos(seg);
@@ -386,7 +388,9 @@ function dibujar(){
   document.getElementById("chart-sub").textContent =
     E.length ? (E[0].mes + " a " + E[E.length-1].mes + " · unidades por mes · " +
       cats.length + " tipos de máquina, " +
-      cats.filter(function(c){ return !apagada(seg,c.key); }).length + " visibles") : "";
+      cats.filter(function(c){ return !apagada(seg,c.key); }).length + " visibles" +
+      (S.ov.retenciones && hayEventos() ? " · la cinta amarilla es la retención a la soja" : "") +
+      (S.ov.tc ? " · la tira de abajo es el dólar oficial" : "")) : "";
 
   if(E.length<2){
     cont.innerHTML = '<p class="nota">Elegí un rango de al menos dos meses.</p>';
@@ -395,8 +399,9 @@ function dibujar(){
 
   const hayEv = IND && IND.eventos && IND.eventos.length;
   const cinta = (S.ov.retenciones && hayEv) ? 24 : 0;   // alto de la cinta de retenciones
-  const tira  = S.ov.tc && IND && IND.series && IND.series.tc ? 48 : 0;
-  const W=1000, mL=48, mR=26, mT=16, mB=30;
+  const CLAVE_TC = (IND && IND.series && IND.series.oficial) ? "oficial" : "tc";
+  const tira  = S.ov.tc && IND && IND.series && IND.series[CLAVE_TC] ? 48 : 0;
+  const W=1000, mL=58, mR=26, mT=16, mB=30;
   const H = 300 + cinta + tira;
   const iw = W-mL-mR;
   const mT2 = mT + cinta;
@@ -499,8 +504,6 @@ function dibujar(){
       pinta(desde, c.i-1, tasa); desde=c.i; tasa=c.tasa;
     });
     pinta(desde, E.length-1, tasa);
-    cintaSVG += '<text x="'+(mL-9)+'" y="'+(mT+10.5)+'" text-anchor="end" '
-      + 'fill="var(--ink-3)" font-size="9.5" font-weight="700">DEX soja</text>';
   }
 
   // ---- lineas verticales de cada decreto ----
@@ -520,7 +523,7 @@ function dibujar(){
   // ---- tira del tipo de cambio, abajo, con su propia escala ----
   let tcSVG = "";
   if(tira){
-    const st = IND.series.tc || {};
+    const st = IND.series[CLAVE_TC] || {};
     const vs = E.map(function(e){ return st[e.clave]==null ? null : st[e.clave]; });
     const hay2 = vs.filter(function(v){ return v!=null; });
     if(hay2.length){

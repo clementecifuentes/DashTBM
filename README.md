@@ -38,8 +38,9 @@ Una sola página, en dos bloques:
      el tooltip dice cuál es y qué cambió.
    - *Retenciones*: cinta arriba del área de dibujo con la alícuota de soja
      vigente en cada tramo (33% → 26% → 33% → 26% → 24%).
-   - *Dólar mayorista*: tira debajo del eje, alineada mes a mes, con su propia
-     escala.
+   - *Dólar oficial*: tira debajo del eje, alineada mes a mes, con su propia
+     escala. Es la cotización del **Banco Nación**, tipo vendedor, promediada
+     dentro del mes.
 
    La cinta y la tira comparten el eje de meses con las ventas pero **no** el eje
    vertical. Dibujar el dólar como una línea más dentro del mismo plano sería un
@@ -106,11 +107,17 @@ v4.0, sin clave ni registro) y mensualiza:
 | Soja y maíz | FRED/FMI | precio internacional mensual, US$/t |
 | Préstamos prendarios | 113 | stock, la línea con la que se financia maquinaria |
 | Préstamos por documentos | 111 | stock |
-| Tipo de cambio mayorista | 5 | $/US$ |
+| Tipo de cambio mayorista | 5 | $/US$ (A3500, se usa para pasar los stocks a dólares) |
+| Dólar oficial Banco Nación | argentinadatos | $/US$, tipo vendedor — el que se muestra |
 
 En la página se muestran solo **retenciones y tipo de cambio**; el resto igual
 se baja y queda guardado en `datos/indicadores.json`, así volver a mostrar una
 serie es agregar su clave a la lista `MOSTRAR` de `indicadores.py` y nada más.
+
+El BCRA **no** publica una serie de Banco Nación: su minorista (id 4) es un
+promedio de bancos. El oficial de BNA sale de `api.argentinadatos.com`, que
+tiene la historia diaria desde 2011 sin clave. Contra el mayorista corre entre
+1,3% y 1,8% arriba en los últimos meses.
 
 Los precios de granos salen de FRED (series del FMI, sin clave): son precios
 internacionales del golfo de EEUU, **no** la pizarra de Rosario, que no está

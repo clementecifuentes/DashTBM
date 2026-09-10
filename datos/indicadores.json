@@ -156,6 +156,32 @@
    "2026-08": 1499.96,
    "2026-09": 1510.9
   },
+  "oficial": {
+   "2024-10": 1000.92,
+   "2024-11": 1020.92,
+   "2024-12": 1041.55,
+   "2025-01": 1062.48,
+   "2025-02": 1077.76,
+   "2025-03": 1088.38,
+   "2025-04": 1140.9,
+   "2025-05": 1166.29,
+   "2025-06": 1196.17,
+   "2025-07": 1284.03,
+   "2025-08": 1340.65,
+   "2025-09": 1420.5,
+   "2025-10": 1463.39,
+   "2025-11": 1453.67,
+   "2025-12": 1471.13,
+   "2026-01": 1472.74,
+   "2026-02": 1426.96,
+   "2026-03": 1416.29,
+   "2026-04": 1406.17,
+   "2026-05": 1420.16,
+   "2026-06": 1469.63,
+   "2026-07": 1508.71,
+   "2026-08": 1520.16,
+   "2026-09": 1532.0
+  },
   "prendarios_usd": {
    "2024-10": 2689.9,
    "2024-11": 2845.3,
@@ -342,6 +368,12 @@
    "id_bcra": 5,
    "modo": "promedio"
   },
+  "oficial": {
+   "etiqueta": "Dólar oficial Banco Nación (venta)",
+   "unidad": "$/US$",
+   "fuente": "api.argentinadatos.com",
+   "modo": "promedio"
+  },
   "prendarios_usd": {
    "etiqueta": "Préstamos prendarios al sector privado (en dólares)",
    "unidad": "MUS$",
@@ -460,8 +492,8 @@
  ],
  "mostrar": [
   "retenciones",
-  "tc"
+  "oficial"
  ],
- "fuente": "BCRA (Estadísticas Monetarias v4.0) y FMI vía FRED",
- "bajado": "2026-09-10 16:02"
+ "fuente": "BCRA, Banco Nación (vía argentinadatos) y FMI vía FRED",
+ "bajado": "2026-09-10 16:36"
 }

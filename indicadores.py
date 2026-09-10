@@ -4,6 +4,9 @@
 Fuentes, todas publicas y sin clave:
   * Tasas y credito: API del BCRA (Estadisticas Monetarias v4.0),
     https://api.bcra.gob.ar/estadisticas/v4.0/monetarias
+  * Dolar oficial (Banco Nacion): https://api.argentinadatos.com, historia
+    diaria desde 2011, sin clave. El BCRA no publica una serie propia de BNA:
+    su minorista (id 4) es un promedio de bancos, no el mostrador del Nacion.
   * Precios de granos: series mensuales del FMI publicadas por la Reserva
     Federal de St. Louis, https://fred.stlouisfed.org (endpoint CSV abierto).
     OJO: son precios internacionales (golfo de EEUU), NO la pizarra de Rosario.
@@ -27,6 +30,7 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 SALIDA = os.path.join(BASE, "datos", "indicadores.json")
 API = "https://api.bcra.gob.ar/estadisticas/v4.0/monetarias/%d?desde=%s&hasta=%s&limit=3000"
 FRED = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=%s"
+DOLAR = "https://api.argentinadatos.com/v1/cotizaciones/dolares/oficial"
 
 # id FRED -> (clave, etiqueta, unidad)
 GRANOS = {
@@ -36,7 +40,7 @@ GRANOS = {
 
 # Que se muestra en la pagina. El resto igual se baja y queda en el JSON, asi
 # volver a mostrar una serie es agregar su clave a esta lista y nada mas.
-MOSTRAR = ["retenciones", "tc"]
+MOSTRAR = ["retenciones", "oficial"]
 
 DESDE = "2024-10-01"   # un mes antes del primer informe TBM
 HASTA = datetime.now().strftime("%Y-%m-%d")
@@ -90,6 +94,18 @@ def bajar_fred(id_serie):
     return out
 
 
+def bajar_dolar_oficial():
+    """Cotizacion del Banco Nacion, promedio mensual del tipo vendedor."""
+    req = urllib.request.Request(DOLAR, headers={
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Accept": "application/json"})
+    with urllib.request.urlopen(req, context=CTX, timeout=40) as r:
+        datos = json.load(r)
+    return [(d["fecha"], float(d["venta"])) for d in datos
+            if d.get("fecha") and d.get("venta") is not None
+            and d["fecha"] >= DESDE]
+
+
 def alicuotas_por_mes(eventos, meses):
     """Alicuota de cada grano vigente al cierre de cada mes, segun los decretos."""
     cambios = sorted((e for e in eventos
@@ -135,6 +151,17 @@ def main():
         ms = sorted(series[clave])
         print("  OK %-11s %s .. %s  (%d meses, %d datos diarios)"
               % (clave, ms[0], ms[-1], len(ms), len(crudo)))
+
+    try:
+        series["oficial"] = mensualizar(bajar_dolar_oficial(), "promedio")
+        meta["oficial"] = {"etiqueta": "Dólar oficial Banco Nación (venta)",
+                           "unidad": "$/US$", "fuente": "api.argentinadatos.com",
+                           "modo": "promedio"}
+        ms = sorted(series["oficial"])
+        print("  OK %-11s %s .. %s  (%d meses, Banco Nación)"
+              % ("oficial", ms[0], ms[-1], len(ms)))
+    except Exception as e:
+        print("  [!] oficial: %s" % e)
 
     # Stock de credito pasado a dolares: en pesos nominales, 21 meses de
     # inflacion hacen que la serie no se pueda comparar consigo misma.
@@ -193,7 +220,7 @@ def main():
     with open(SALIDA, "w", encoding="utf-8") as fh:
         json.dump({"series": series, "meta": meta, "eventos": eventos,
                    "mostrar": MOSTRAR,
-                   "fuente": "BCRA (Estadísticas Monetarias v4.0) y FMI vía FRED",
+                   "fuente": "BCRA, Banco Nación (vía argentinadatos) y FMI vía FRED",
                    "bajado": datetime.now().strftime("%Y-%m-%d %H:%M")},
                   fh, ensure_ascii=False, indent=1)
     print("\n-> %s" % SALIDA)
