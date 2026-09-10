@@ -1,0 +1,81 @@
+[
+ {
+  "fecha": "2025-01-27",
+  "mes": "2025-01",
+  "tipo": "retenciones",
+  "titulo": "Baja temporal de retenciones (Decreto 38/2025)",
+  "detalle": "Soja 33%→26%, subproductos 31%→24,5%, maíz y trigo 12%→9,5%, girasol →5,5%. Rige hasta el 30/06/2025 y exige liquidar el 95% de las divisas.",
+  "alicuotas": {
+   "soja": 26,
+   "maiz": 9.5,
+   "trigo": 9.5
+  },
+  "fuente": "https://www.argentina.gob.ar/noticias"
+ },
+ {
+  "fecha": "2025-07-01",
+  "mes": "2025-07",
+  "tipo": "retenciones",
+  "titulo": "Vuelven las alícuotas plenas (Decreto 439/2025)",
+  "detalle": "Termina la baja temporal: soja vuelve a 33% y maíz a 12%. Trigo y cebada mantienen 9,5% (prorrogado hasta el 31/03/2026).",
+  "alicuotas": {
+   "soja": 33,
+   "maiz": 12,
+   "trigo": 9.5
+  },
+  "fuente": "https://www.lanacion.com.ar/economia/campo/decreto-el-gobierno-oficializo-la-suba-de-las-retenciones-a-la-soja-y-el-maiz-y-la-continuidad-de-nid27062025/"
+ },
+ {
+  "fecha": "2025-07-31",
+  "mes": "2025-07",
+  "tipo": "retenciones",
+  "titulo": "Baja permanente anunciada en la Rural (Decreto 526/2025)",
+  "detalle": "Soja 33%→26%, maíz y sorgo 12%→9,5%, girasol y carnes también bajan. Rige desde el día siguiente a la publicación.",
+  "alicuotas": {
+   "soja": 26,
+   "maiz": 9.5,
+   "trigo": 9.5
+  },
+  "fuente": "https://www.infobae.com/economia/2025/07/31/el-gobierno-oficializo-la-baja-de-retenciones-para-granos-y-carnes-de-forma-permanente/"
+ },
+ {
+  "fecha": "2025-09-22",
+  "mes": "2025-09",
+  "tipo": "retenciones",
+  "titulo": "Retenciones CERO por cupo (Decreto 682/2025)",
+  "detalle": "Derecho de exportación 0% para granos y subproductos hasta el 31/10/2025 o hasta registrar DJVE por US$ 7.000 millones, lo que ocurra primero. El cupo se agotó en dos días hábiles y las alícuotas volvieron a 26% / 9,5%. Primera vez con soja en 0% desde 2002.",
+  "alicuotas": {
+   "soja": 0,
+   "maiz": 0,
+   "trigo": 0
+  },
+  "fuente": "https://www.infobae.com/economia/2025/09/22/los-detalles-del-decreto-que-bajo-a-0-las-retenciones-al-campo/",
+  "solo_evento": true
+ },
+ {
+  "fecha": "2025-12-12",
+  "mes": "2025-12",
+  "tipo": "retenciones",
+  "titulo": "Nueva baja permanente (Decreto 877/2025)",
+  "detalle": "Soja 26%→24%, subproductos 24,5%→22,5%, maíz y sorgo 9,5%→8,5%, trigo y cebada 9,5%→7,5%, girasol 5,5%→4,5%.",
+  "alicuotas": {
+   "soja": 24,
+   "maiz": 8.5,
+   "trigo": 7.5
+  },
+  "fuente": "https://www.argentina.gob.ar/noticias/nueva-reduccion-de-impuestos-las-exportaciones-para-el-campo"
+ },
+ {
+  "fecha": "2026-06-04",
+  "mes": "2026-06",
+  "tipo": "retenciones",
+  "titulo": "Cronograma de baja escalonada (Decreto 423/2026)",
+  "detalle": "Trigo y cebada 7,5%→5,5%. Para soja se fija un sendero: 24% hoy, 21% en enero de 2027 y 15% en diciembre de 2028; maíz y sorgo bajan por trimestre desde 2027.",
+  "alicuotas": {
+   "soja": 24,
+   "maiz": 8.5,
+   "trigo": 5.5
+  },
+  "fuente": "https://www.infobae.com/economia/2026/06/03/el-gobierno-oficializo-una-reduccion-en-las-retenciones-para-el-agro-y-los-biocombustibles/"
+ }
+]

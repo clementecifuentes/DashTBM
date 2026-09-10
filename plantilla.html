@@ -154,6 +154,8 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
 .tip .r b{font-variant-numeric:tabular-nums;color:var(--ink)}
 .tip .pt{width:8px;height:8px;border-radius:50%}
 
+.panel-ind{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.ev-marca{cursor:default}
 .nota{font-size:.75rem;color:var(--ink-2);margin-top:10px;line-height:1.6}
 .avisos{background:#fff6e8;border:1px solid #e8bd7a;color:#6b3d06;border-radius:var(--r);
   padding:11px 15px;margin-bottom:18px;font-size:.79rem}
@@ -358,8 +360,11 @@ function seccionSegmento(mes, seg, n){
 }
 
 /* ============================ gráfico ============================ */
+const IND = (APP && APP.indicadores) || null;
+
 const G = {
   medida: "industria",
+  indicador: "badlar",
   activas: [],          // [{id, seg, key, label, slot}]
   libres: SLOTS.map((_,i)=>i),
 };
@@ -409,6 +414,33 @@ function valorSerie(seg, key, clave){
   if(!p) return null;
   const v = (p[G.medida]||{})[key];
   return v===undefined ? null : v;
+}
+
+/* alicuota de soja vigente al cierre de cada mes, armada desde los eventos */
+function alicuotaSoja(clave){
+  if(!IND || !IND.eventos) return null;
+  let v = 33;   // vigente antes del primer cambio del periodo
+  for(const e of IND.eventos){
+    if(e.solo_evento || !e.alicuotas || e.alicuotas.soja==null) continue;
+    if(e.fecha.slice(0,7) <= clave) v = e.alicuotas.soja;
+  }
+  return v;
+}
+
+function catalogoIndicadores(){
+  if(!IND) return [];
+  const orden = ["badlar","tamar","adelantos","prendarios_usd","documentos_usd","tc"];
+  const out = orden.filter(k => IND.series && IND.series[k]).map(k => ({
+    key:k, label:IND.meta[k].etiqueta, unidad:IND.meta[k].unidad}));
+  if(IND.eventos && IND.eventos.length)
+    out.push({key:"retenciones", label:"Retenciones a la soja", unidad:"%"});
+  return out;
+}
+
+function valoresIndicador(eje){
+  if(G.indicador==="retenciones") return eje.map(e=>alicuotaSoja(e.clave));
+  const s = (IND && IND.series[G.indicador]) || {};
+  return eje.map(e => s[e.clave]==null ? null : s[e.clave]);
 }
 
 /* paso de eje redondo: 1, 2, 2.5, 5, 10, 20, 25, 50, ... */
@@ -506,6 +538,8 @@ function dibujarChart(){
     </svg>
     <div class="tip" id="tip"></div>`;
 
+  dibujarPanel(eje, x, mL, mR, W);
+
   const svg = cont.querySelector("svg");
   const tip = cont.querySelector("#tip");
   const cruz = cont.querySelector("#cruz");
@@ -530,6 +564,71 @@ function dibujarChart(){
   });
   cont.querySelector("#captura").addEventListener("mouseleave", ()=>{
     tip.style.opacity="0"; cruz.setAttribute("opacity","0");
+  });
+}
+
+/* Panel de indicadores: mismo eje x que el grafico de arriba, eje y propio.
+   Nunca un segundo eje y sobre el mismo dibujo: eso fabrica correlaciones. */
+function dibujarPanel(eje, x, mL, mR, W){
+  const cont = document.getElementById("panel-ind");
+  if(!cont || !IND) return;
+  const H=132, mT=10, mB=18, ih=H-mT-mB;
+  const vals = valoresIndicador(eje);
+  const hay = vals.filter(v=>v!=null);
+  if(!hay.length){ cont.innerHTML = '<p class="nota">Sin datos para este indicador.</p>'; return; }
+
+  const cat = catalogoIndicadores().find(c=>c.key===G.indicador) || {label:"", unidad:""};
+  const min = Math.min(...hay), max = Math.max(...hay);
+  const paso = pasoLindo((max-min || max || 1)/3);
+  const lo = Math.max(0, Math.floor(min/paso)*paso);
+  const hi = Math.ceil((max + paso*0.15)/paso)*paso;
+  const y = v => mT + ih - (v-lo)/((hi-lo)||1)*ih;
+
+  const grid=[], etY=[];
+  for(let v=lo; v<=hi+1e-9; v+=paso){
+    grid.push(`<line x1="${mL}" x2="${W-mR}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/>`);
+    etY.push(`<text x="${mL-8}" y="${y(v)+4}" text-anchor="end" fill="var(--ink-3)"
+      font-size="10.5">${num(v, v>=1000?0:(paso<1?1:0))}</text>`);
+  }
+
+  const escalon = G.indicador==="retenciones";
+  let d = "";
+  vals.forEach((v,i)=>{
+    if(v==null) return;
+    if(!d) d = `M${x(i)},${y(v)}`;
+    else d += escalon ? `H${x(i)}V${y(v)}` : `L${x(i)},${y(v)}`;
+  });
+
+  // eventos: marca vertical en el mes que corresponde
+  const marcas = (IND.eventos||[]).map(e=>{
+    const i = eje.findIndex(p=>p.clave===e.mes);
+    if(i<0) return "";
+    return `<g class="ev-marca"><line x1="${x(i)}" x2="${x(i)}" y1="${mT}" y2="${mT+ih}"
+      stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="2 3" opacity=".55"/>
+      <circle cx="${x(i)}" cy="${mT+ih}" r="3.2" fill="var(--surface)"
+        stroke="var(--ink-2)" stroke-width="1.4"><title>${esc(e.titulo)}
+${esc(e.detalle)}</title></circle></g>`;
+  }).join("");
+
+  cont.innerHTML = `
+    <div class="fila-f" style="margin-bottom:2px">
+      <span class="f-tit">Contexto</span>
+      ${catalogoIndicadores().map(c=>`<button class="chip" type="button" data-ind="${c.key}"
+        aria-pressed="${c.key===G.indicador}">${esc(c.label)}</button>`).join("")}
+    </div>
+    <div style="font-size:.72rem;color:var(--ink-3);margin:6px 0 2px">${esc(cat.label)} · ${esc(cat.unidad)}</div>
+    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cat.label)}">
+      ${grid.join("")}${etY.join("")}${marcas}
+      <path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2"
+        stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>`;
+
+  cont.querySelectorAll("[data-ind]").forEach(b=>{
+    b.onclick = ()=>{ G.indicador = b.dataset.ind; dibujarChart(); };
+    if(b.getAttribute("aria-pressed")==="true"){
+      b.style.color = "var(--accent)";
+      b.style.setProperty("--c","var(--accent)");
+    }
   });
 }
 
@@ -579,6 +678,12 @@ function seccionChart(){
         </div>
       </div>
       <div class="chart-hold" id="chart-hold"></div>
+      <div class="panel-ind" id="panel-ind"></div>
+      ${IND ? `<p class="nota">Contexto: ${esc(IND.fuente)}, bajado el ${esc(IND.bajado)}.
+        Las marcas verticales son cambios de derechos de exportación (pasar el mouse por el punto
+        para ver el decreto). Eje x compartido con el gráfico de arriba; el eje y es propio,
+        a propósito: superponer las dos escalas en un mismo dibujo fabrica correlaciones
+        que no están en los datos.</p>` : ""}
     </div>`;
 }
 

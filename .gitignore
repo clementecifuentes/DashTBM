@@ -5,3 +5,7 @@ datos/*.PDF
 __pycache__/
 *.pyc
 .claude/
+
+# scratch de exploracion
+_*.json
+_*.html

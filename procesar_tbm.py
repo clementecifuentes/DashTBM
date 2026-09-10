@@ -39,6 +39,7 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 DIR_DATOS = os.path.join(BASE, "datos")
 DIR_MANUAL = os.path.join(DIR_DATOS, "manual")
 HISTORICO = os.path.join(DIR_DATOS, "historico.json")
+INDICADORES = os.path.join(DIR_DATOS, "indicadores.json")
 PLANTILLA = os.path.join(BASE, "plantilla.html")
 SALIDA = os.path.join(BASE, "index.html")
 
@@ -437,9 +438,17 @@ def main():
     with open(HISTORICO, "w", encoding="utf-8") as fh:
         json.dump(historico, fh, ensure_ascii=False, indent=1)
 
+    indicadores = None
+    if os.path.exists(INDICADORES):
+        with open(INDICADORES, encoding="utf-8") as fh:
+            indicadores = json.load(fh)
+    else:
+        avisar("no hay datos/indicadores.json; correr indicadores.py")
+
     payload = {
         "meses": historico,
         "series": serie_mensual(historico),
+        "indicadores": indicadores,
         "generado": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "avisos": AVISOS,
     }

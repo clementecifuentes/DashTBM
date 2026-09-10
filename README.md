@@ -7,13 +7,15 @@ categoría.
 
 **https://clementecifuentes.github.io/DashTBM/**
 
-## Actualización mensual (3 pasos)
+## Actualización mensual
 
 1. Copiar el PDF nuevo a `datos/`
-2. `python procesar_tbm.py`
-3. `git add -A && git commit -m "TBM <mes>" && git push`
+2. `python indicadores.py` — baja tasas y crédito del BCRA (opcional pero
+   recomendado: deja el contexto al día)
+3. `python procesar_tbm.py`
+4. `git add -A && git commit -m "TBM <mes>" && git push`
 
-El paso 2 lee todos los PDF de `datos/`, acumula cada mes en
+El paso 3 lee todos los PDF de `datos/`, acumula cada mes en
 `datos/historico.json` y regenera `index.html`, que es autocontenido.
 
 ## Qué muestra
@@ -21,6 +23,8 @@ El paso 2 lee todos los PDF de `datos/`, acumula cada mes en
 - **Variación de la industria**: FYTD vs LFYTD en AOR y País, por segmento.
 - **Evolución mensual**: unidades de cada mes (no acumuladas), con filtros para
   combinar categorías de tractores y de cosechadoras en el mismo gráfico.
+- **Contexto**: tasas, stock de crédito y derechos de exportación en un panel
+  propio debajo del gráfico, compartiendo el eje x.
 - **Tablas del informe**: FYTD y LFYTD tal cual salen del PDF, sin retocar.
 - **FYTD vs LFYTD por categoría**: la comparación calculada, con variación en
   unidades y en puntos porcentuales de share.
@@ -51,6 +55,34 @@ Por eso el dashboard muestra, junto a la variación que informa el reporte, la
 comparación contra el dato del año anterior **tal como estaba publicado en su
 momento**: en jul-2026 los tractores del AOR pasan de −18,2% a −2,9%.
 
+## Indicadores de contexto
+
+`indicadores.py` baja de la **API pública del BCRA** (Estadísticas Monetarias
+v4.0, sin clave ni registro) y mensualiza:
+
+| serie | id BCRA | qué es |
+|---|---|---|
+| BADLAR privados | 7 | costo de fondeo mayorista, % TNA |
+| TAMAR privados | 44 | plazo fijo mayorista, % TNA |
+| Adelantos en cta. cte. | 13 | capital de trabajo, % TNA |
+| Préstamos prendarios | 113 | stock, la línea con la que se financia maquinaria |
+| Préstamos por documentos | 111 | stock |
+| Tipo de cambio mayorista | 5 | $/US$ |
+
+Las tasas se promedian dentro del mes; los stocks se toman al cierre. Los stocks
+además se pasan a dólares: en pesos nominales, con la inflación del período, la
+serie no se puede comparar consigo misma.
+
+Los **derechos de exportación** no salen de ninguna API: están curados a mano en
+`datos/eventos.json`, con decreto, fecha, alícuotas y fuente para cada cambio
+(38/2025, 439/2025, 526/2025, 682/2025, 877/2025, 423/2026). El 0% de
+septiembre de 2025 duró dos días hábiles hasta agotar el cupo de US$ 7.000
+millones, así que va marcado como evento y no como nivel mensual.
+
+El panel usa **eje y propio** y comparte solo el eje x con el gráfico de
+unidades. Superponer dos escalas en un mismo dibujo es la forma clásica de
+fabricar correlaciones que no están en los datos.
+
 ## Informes escaneados
 
 Feb-2026 y Jun-2026 llegaron con el texto convertido a curvas (sin capa de
@@ -64,6 +96,9 @@ otro informe así, se agrega ahí siguiendo el mismo formato.
 | Archivo | Qué es |
 |---|---|
 | `procesar_tbm.py` | Lee los PDF, valida y genera el HTML |
+| `indicadores.py` | Baja tasas y crédito del BCRA |
+| `datos/eventos.json` | Cambios de retenciones, curados con fuente |
+| `datos/indicadores.json` | **Generado.** Series mensualizadas |
 | `plantilla.html` | Diseño del dashboard (editar acá, no en `index.html`) |
 | `index.html` | **Generado.** Autocontenido, es lo que se publica |
 | `datos/historico.json` | Datos acumulados de todos los meses |
