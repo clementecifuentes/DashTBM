@@ -25,11 +25,24 @@ Una sola página, en dos bloques:
 1. **Tablas del informe** — FYTD y LFYTD tal cual salen del PDF, sin nada
    calculado encima. Selector de segmento arriba; click en el encabezado de una
    columna para resaltarla en las dos tablas a la vez.
-2. **Evolución mensual** — unidades de cada mes (no acumuladas), con filtro de
-   rango (desde / hasta) y de variables, combinables entre tractores y
-   cosechadoras. Debajo del gráfico se calcula la variación entre los meses y
-   las variables elegidos: valor inicial, final, Δ en unidades, Δ %, total del
-   rango y promedio mensual. El contexto de tasas y retenciones queda plegado.
+2. **Evolución mensual por tipo de máquina** — una línea por cada tipo de las
+   tablas (14 bandas de potencia, 4 clases de cosechadora), todas en el mismo
+   gráfico. La leyenda de abajo apaga y prende cada una. Al pasar el mouse se
+   aísla la línea más cercana y el resto se atenúa. Filtro de rango
+   (desde / hasta), de segmento y de medida (industria o dealer). Debajo se
+   calcula la variación entre los meses y los tipos visibles: valor inicial,
+   final, Δ en unidades, Δ %, total del rango y promedio mensual. El contexto
+   de tasas y retenciones queda plegado.
+
+### Por qué una rampa y no 18 colores
+
+Las bandas de potencia son una escala **ordenada**, no categorías sueltas. Cada
+segmento usa entonces una rampa de un solo tono, de claro (máquina chica) a
+oscuro (máquina grande): azul para tractores, naranja para cosechadoras. Con 18
+colores distintos nadie distingue una línea de otra; con la rampa se lee de una
+que las líneas oscuras son los tractores grandes. El verde y el amarillo quedan
+para la identidad de la página, nunca para los datos, así no se confunde la
+marca con una serie.
 
 Un mes puede dar **negativo**: el reporte reasigna unidades entre AOR de un
 informe al siguiente, así que el FYTD del AOR a veces baja. Cuando un extremo
