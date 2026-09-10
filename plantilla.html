@@ -192,6 +192,10 @@ details.plegable[open]>summary::before{content:"\25BE  "}
 .mini .n{font-size:.66rem;color:var(--ink-2);font-weight:600;line-height:1.25;
   display:block;height:2.5em;overflow:hidden}
 .mini .v{font-size:.82rem;font-weight:700;font-variant-numeric:tabular-nums}
+.mini .cuando{font-size:.62rem;color:var(--ink-3);margin-left:5px}
+.mas-alla{font-size:.7rem;color:var(--ink-2);background:var(--sup-2);
+  border-left:3px solid var(--amarillo);padding:6px 9px;border-radius:0 4px 4px 0;
+  margin:6px 0 8px;line-height:1.45}
 .mini svg{display:block;width:100%;height:26px;margin-top:2px}
 @media (max-width:640px){
   .flot{right:0;left:0;bottom:0;width:auto;max-width:none;border-radius:12px 12px 0 0;
@@ -401,7 +405,7 @@ function dibujar(){
   const cinta = (S.ov.retenciones && hayEv) ? 24 : 0;   // alto de la cinta de retenciones
   const CLAVE_TC = (IND && IND.series && IND.series.oficial) ? "oficial" : "tc";
   const tira  = S.ov.tc && IND && IND.series && IND.series[CLAVE_TC] ? 48 : 0;
-  const W=1000, mL=58, mR=26, mT=16, mB=30;
+  const W=1000, mL=58, mR=64, mT=16, mB=30;
   const H = 300 + cinta + tira;
   const iw = W-mL-mR;
   const mT2 = mT + cinta;
@@ -542,7 +546,8 @@ function dibujar(){
         + '<text class="tira-tc" x="'+(mL-9)+'" y="'+(y0+alto)+'" text-anchor="end" '
         + 'fill="var(--ink-3)">'+num(mn,0)+'</text>'
         + '<text class="tira-tc" x="'+(W-mR+3)+'" y="'+(yy(vs[vs.length-1])+3)+'" '
-        + 'fill="var(--jd)" font-weight="700">'+num(vs[vs.length-1],0)+'</text>';
+        + 'fill="var(--jd)" font-weight="700">'+esc(E[E.length-1].mes)+' · '
+        + num(vs[vs.length-1],0)+'</text>';
     }
   }
 
@@ -745,7 +750,8 @@ function dibujarFlot(){
   if(!act){ cuerpo.innerHTML = '<p class="nota">Sin indicadores cargados.</p>'; return; }
 
   cuerpo.innerHTML = '<div class="flot-tit">'+esc(act.label)+'</div>'
-    + '<div class="flot-uni">'+esc(act.unidad)+'</div>'
+    + '<div class="flot-uni">'+esc(act.unidad)+' · promedio de cada mes</div>'
+    + masAlla(act, E)
     + '<div id="flot-grande"></div>'
     + '<div class="mini-grid" id="flot-minis"></div>'
     + '<p class="nota">Los puntos amarillos marcan cambios de derechos de exportación: '
@@ -760,6 +766,7 @@ function dibujarFlot(){
     return '<button class="mini" type="button" data-ind="'+c.key+'" aria-pressed="'
       +(c.key===act.key)+'"><span class="n">'+esc(c.label)+'</span>'
       +'<span class="v">'+(ult==null?"—":num(ult, ult>=1000?0:1))+'</span>'
+      +'<span class="cuando">'+esc(E[E.length-1].mes)+'</span>'
       +'<span data-spark="'+c.key+'"></span></button>';
   }).join("");
 
@@ -773,6 +780,22 @@ function dibujarFlot(){
 }
 
 /* grafico grande de un indicador */
+/* Aviso cuando la serie del indicador llega mas lejos que el ultimo informe
+   TBM: si no, el valor del borde parece "atrasado" contra el diario de hoy. */
+function masAlla(cat, E){
+  if(cat.key==="retenciones" || !IND.series[cat.key]) return "";
+  const s = IND.series[cat.key];
+  const ms = Object.keys(s).sort();
+  const finRango = E[E.length-1].clave;
+  if(!ms.length || ms[ms.length-1] <= finRango) return "";
+  const m = ms[ms.length-1];
+  const COR = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const et = COR[+m.slice(5)] + " " + m.slice(2,4);
+  return '<div class="mas-alla">El gráfico corta en '+esc(E[E.length-1].mes)
+    + ', que es hasta donde llega el último informe TBM. La serie sigue: '
+    + esc(et)+' cerró en <b>'+num(s[m], s[m]>=1000?0:1)+'</b>.</div>';
+}
+
 function grafInd(cont, vals, E, cat, conEventos){
   const hay = vals.filter(function(v){ return v!=null; });
   if(!hay.length){ cont.innerHTML = '<p class="nota">Sin datos en este rango.</p>'; return; }

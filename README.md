@@ -114,6 +114,12 @@ En la página se muestran solo **retenciones y tipo de cambio**; el resto igual
 se baja y queda guardado en `datos/indicadores.json`, así volver a mostrar una
 serie es agregar su clave a la lista `MOSTRAR` de `indicadores.py` y nada más.
 
+El dólar se muestra como **promedio del mes**, y el gráfico termina donde
+termina el último informe TBM. Por eso el valor del borde no coincide con el
+del diario de hoy: en jul-2026 el promedio fue 1.509, mientras que el dato
+diario de sep-2026 es 1.535. Tanto la tira como la ventana dicen de qué mes es
+cada número, y la ventana avisa hasta dónde llega la serie.
+
 El BCRA **no** publica una serie de Banco Nación: su minorista (id 4) es un
 promedio de bancos. El oficial de BNA sale de `api.argentinadatos.com`, que
 tiene la historia diaria desde 2011 sin clave. Contra el mayorista corre entre
