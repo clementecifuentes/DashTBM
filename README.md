@@ -31,8 +31,13 @@ Una sola página, en dos bloques:
    aísla la línea más cercana y el resto se atenúa. Filtro de rango
    (desde / hasta), de segmento y de medida (industria o dealer). Debajo se
    calcula la variación entre los meses y los tipos visibles: valor inicial,
-   final, Δ en unidades, Δ %, total del rango y promedio mensual. El contexto
-   de tasas y retenciones queda plegado.
+   final, Δ en unidades, Δ %, total del rango y promedio mensual.
+3. **Tasas e indicadores** — un botón abre una ventana flotante, que se arrastra
+   por su encabezado y se cierra con la × o con Escape. Adentro: el indicador
+   elegido en grande con las marcas de cada decreto de retenciones, y abajo una
+   grilla con todos los indicadores en miniatura y su último valor. Toma el
+   mismo rango de meses que el gráfico de ventas y se actualiza cuando lo
+   cambiás, pero cada indicador conserva su propia escala.
 
 ### Por qué una rampa y no 18 colores
 
