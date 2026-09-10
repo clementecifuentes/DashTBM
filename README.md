@@ -20,14 +20,21 @@ El paso 3 lee todos los PDF de `datos/`, acumula cada mes en
 
 ## Qué muestra
 
-- **Variación de la industria**: FYTD vs LFYTD en AOR y País, por segmento.
-- **Evolución mensual**: unidades de cada mes (no acumuladas), con filtros para
-  combinar categorías de tractores y de cosechadoras en el mismo gráfico.
-- **Contexto**: tasas, stock de crédito y derechos de exportación en un panel
-  propio debajo del gráfico, compartiendo el eje x.
-- **Tablas del informe**: FYTD y LFYTD tal cual salen del PDF, sin retocar.
-- **FYTD vs LFYTD por categoría**: la comparación calculada, con variación en
-  unidades y en puntos porcentuales de share.
+Una sola página, en dos bloques:
+
+1. **Tablas del informe** — FYTD y LFYTD tal cual salen del PDF, sin nada
+   calculado encima. Selector de segmento arriba; click en el encabezado de una
+   columna para resaltarla en las dos tablas a la vez.
+2. **Evolución mensual** — unidades de cada mes (no acumuladas), con filtro de
+   rango (desde / hasta) y de variables, combinables entre tractores y
+   cosechadoras. Debajo del gráfico se calcula la variación entre los meses y
+   las variables elegidos: valor inicial, final, Δ en unidades, Δ %, total del
+   rango y promedio mensual. El contexto de tasas y retenciones queda plegado.
+
+Un mes puede dar **negativo**: el reporte reasigna unidades entre AOR de un
+informe al siguiente, así que el FYTD del AOR a veces baja. Cuando un extremo
+del rango es cero o negativo el Δ % se muestra como `—`, porque no es
+interpretable.
 
 ## Cómo se leen los números
 
