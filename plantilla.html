@@ -105,7 +105,19 @@ td.marca,th.marca{background:var(--hl)!important}
 .chart-sub{font-size:.75rem;color:var(--ink-3);margin-bottom:8px}
 .chart-hold{position:relative}
 svg.chart{display:block;width:100%;height:auto;overflow:visible}
-.serie{transition:opacity .12s, stroke-width .12s}
+.serie{transition:opacity .14s ease, stroke-width .14s ease}
+polyline.serie{stroke-dasharray:1;stroke-dashoffset:1;
+  animation:trazo .85s cubic-bezier(.25,.8,.3,1) forwards;
+  animation-delay:calc(var(--i,0) * 28ms)}
+@keyframes trazo{to{stroke-dashoffset:0}}
+.serie.foco{filter:drop-shadow(0 1.5px 3px rgba(0,0,0,.28))}
+#area-foco{transition:opacity .18s ease;pointer-events:none}
+#marcas-foco circle{pointer-events:none}
+.fy-banda{pointer-events:none}
+@media (prefers-reduced-motion: reduce){
+  polyline.serie{animation:none;stroke-dashoffset:0}
+  .serie{transition:none}
+}
 .tip{position:absolute;pointer-events:none;background:var(--sup);
   border:1px solid var(--line-2);border-radius:7px;box-shadow:0 6px 22px rgba(0,0,0,.16);
   padding:9px 11px;font-size:.77rem;min-width:180px;opacity:0;transition:opacity .09s;z-index:5}
@@ -344,6 +356,20 @@ function dibujar(){
   etY += '<text x="'+(mL-9)+'" y="'+(mT-4)+'" text-anchor="end" fill="var(--ink-3)" '
        + 'font-size="10" font-weight="600">unid.</text>';
 
+  // bandas suaves alternadas por anio fiscal: dan profundidad y ubican el ejercicio
+  let bandas="", ini=0;
+  E.forEach(function(e,i){
+    const corta = (i===E.length-1) || E[i+1].fy!==e.fy;
+    if(corta){
+      const x0 = ini===0 ? mL : (x(ini)+x(ini-1))/2;
+      const x1 = i===E.length-1 ? W-mR : (x(i)+x(i+1))/2;
+      const par = (e.fy.charCodeAt(e.fy.length-1)) % 2 === 0;
+      if(par) bandas += '<rect class="fy-banda" x="'+x0+'" y="'+mT+'" width="'+(x1-x0)
+        +'" height="'+ih+'" fill="var(--ink)" opacity=".025"/>';
+      ini = i+1;
+    }
+  });
+
   let fy="", etX="";
   E.forEach(function(e,i){
     if(i>0 && e.fy!==E[i-1].fy){
@@ -357,7 +383,7 @@ function dibujar(){
     }
   });
 
-  const lineas = datos.filter(function(d){ return !d.off; }).map(function(d){
+  const lineas = datos.filter(function(d){ return !d.off; }).map(function(d,orden){
     const tramos=[]; let act=[];
     d.pts.forEach(function(p){
       if(p.v==null){ if(act.length) tramos.push(act); act=[]; }
@@ -366,15 +392,17 @@ function dibujar(){
     return tramos.map(function(t){
       return t.length===1
         ? '<circle class="serie" data-k="'+esc(d.key)+'" cx="'+t[0].split(",")[0]+'" cy="'+t[0].split(",")[1]+'" r="3" fill="'+d.color+'"/>'
-        : '<polyline class="serie" data-k="'+esc(d.key)+'" points="'+t.join(" ")+'" fill="none" stroke="'+d.color+'" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"/>';
+        : '<polyline class="serie" data-k="'+esc(d.key)+'" points="'+t.join(" ")+'" pathLength="1" style="--i:'+orden+'" fill="none" stroke="'+d.color+'" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"/>';
     }).join("");
   }).join("");
 
   cont.innerHTML =
     '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Unidades por mes y tipo de máquina">'
-    + grid + fy
+    + bandas + grid + fy
     + '<line x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(0)+'" y2="'+y(0)+'" stroke="var(--line-2)"/>'
-    + etY + etX + lineas
+    + etY + etX
+    + '<path id="area-foco" d="" fill="none" opacity="0"/>'
+    + lineas + '<g id="marcas-foco"></g>' 
     + '<line id="cruz" x1="0" x2="0" y1="'+mT+'" y2="'+(mT+ih)+'" stroke="var(--ink-3)" stroke-dasharray="3 3" opacity="0"/>'
     + '<rect x="'+mL+'" y="'+mT+'" width="'+iw+'" height="'+ih+'" fill="transparent" id="cap"/>'
     + '</svg><div class="tip" id="tip"></div>';
@@ -382,12 +410,36 @@ function dibujar(){
   const svg=cont.querySelector("svg"), tip=cont.querySelector("#tip"), cruz=cont.querySelector("#cruz");
   const vivos = datos.filter(function(d){ return !d.off; });
 
+  const area = cont.querySelector("#area-foco");
+  const marcas = cont.querySelector("#marcas-foco");
+
   function pintarFoco(k){
     cont.querySelectorAll(".serie").forEach(function(el){
       const suyo = el.dataset.k===k;
-      el.style.opacity = (k===null || suyo) ? "1" : ".18";
+      el.style.opacity = (k===null || suyo) ? "1" : ".16";
       el.setAttribute("stroke-width", suyo ? "3.2" : "1.9");
+      el.classList.toggle("foco", suyo);
     });
+    const d = k==null ? null : vivos.find(function(s){ return s.key===k; });
+    if(!d){ area.setAttribute("opacity","0"); marcas.innerHTML=""; return; }
+    // relleno bajo la linea en foco, por tramos (puede haber meses sin dato)
+    let dd="", act=[];
+    const cerrar = function(){
+      if(act.length<2){ act=[]; return; }
+      dd += "M"+act[0][0]+","+y(0)+"L"+act.map(function(p){return p[0]+","+p[1];}).join("L")
+          + "L"+act[act.length-1][0]+","+y(0)+"Z";
+      act=[];
+    };
+    d.pts.forEach(function(p){
+      if(p.v==null) cerrar(); else act.push([x(p.i), y(p.v)]);
+    });
+    cerrar();
+    area.setAttribute("d", dd);
+    area.setAttribute("fill", d.color);
+    area.setAttribute("opacity", dd ? ".13" : "0");
+    marcas.innerHTML = d.pts.filter(function(p){ return p.v!=null; }).map(function(p){
+      return '<circle cx="'+x(p.i)+'" cy="'+y(p.v)+'" r="3" fill="var(--sup)" stroke="'
+        +d.color+'" stroke-width="2"/>'; }).join("");
   }
 
   cont.querySelector("#cap").addEventListener("mousemove", function(ev){
