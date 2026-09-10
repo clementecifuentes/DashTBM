@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TBM Dealer Analysis</title>
+<style>
+:root{
+  --bg:#f0faf0; --card:#ffffff; --card2:#e8f5e3;
+  --border:rgba(22,101,52,0.16); --border2:rgba(22,101,52,0.32);
+  --text:#052e10; --sub:#166534; --dim:#4d8c5c;
+  --green:#166534; --green2:#16a34a;
+  --up:#0a7d0a; --upfill:#0ca30c; --down:#b02626; --downfill:#d03b3b;
+  --neutral:#8a9a8c;
+  --radius:10px;
+  --shadow:0 1px 4px rgba(22,101,52,.10), 0 0 0 1px rgba(22,101,52,.07);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0d1410; --card:#141d17; --card2:#1b271f;
+    --border:rgba(134,199,150,.18); --border2:rgba(134,199,150,.34);
+    --text:#e8f3ea; --sub:#8fcf9f; --dim:#7fa189;
+    --green:#4ade80; --green2:#22c55e;
+    --up:#3ec93e; --upfill:#0ca30c; --down:#f07070; --downfill:#d03b3b;
+    --neutral:#6b7d6e;
+    --shadow:0 1px 4px rgba(0,0,0,.4), 0 0 0 1px rgba(134,199,150,.10);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px;line-height:1.45}
+.wrap{max-width:1400px;margin:0 auto;padding:18px 16px 60px}
+header.top{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;
+  padding-bottom:14px;border-bottom:2px solid var(--border2);margin-bottom:20px}
+h1{margin:0;font-size:1.35rem;letter-spacing:-.01em}
+h1 small{display:block;font-size:.8rem;font-weight:400;color:var(--dim);margin-top:3px}
+h2{font-size:1.05rem;margin:34px 0 10px;color:var(--green);
+  display:flex;align-items:center;gap:10px}
+h2::after{content:"";flex:1;height:1px;background:var(--border)}
+h3{font-size:.85rem;margin:18px 0 8px;color:var(--sub);text-transform:uppercase;letter-spacing:.06em}
+.ctrl{display:flex;gap:8px;align-items:center}
+select{font:inherit;padding:6px 10px;border-radius:8px;border:1px solid var(--border2);
+  background:var(--card);color:var(--text)}
+label{font-size:.78rem;color:var(--dim)}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:12px}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 16px;box-shadow:var(--shadow)}
+.kpi .lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
+.kpi .big{font-size:1.9rem;font-weight:650;margin:6px 0 2px;letter-spacing:-.02em;
+  display:flex;align-items:baseline;gap:8px}
+.kpi .arrow{font-size:1.1rem}
+.kpi .cmp{font-size:.78rem;color:var(--dim)}
+.kpi .cmp b{color:var(--text);font-weight:600}
+.up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--neutral)}
+
+/* Tablas */
+.scroll{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--card);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:6px 9px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border)}
+thead th{position:sticky;top:0;background:var(--card2);font-size:.72rem;font-weight:600;
+  color:var(--sub);text-transform:uppercase;letter-spacing:.04em;z-index:2}
+thead tr.grp th{font-size:.68rem;border-bottom:1px solid var(--border2)}
+th.cat,td.cat{text-align:left;position:sticky;left:0;background:var(--card);z-index:1;
+  font-weight:600;border-right:1px solid var(--border)}
+thead th.cat{background:var(--card2);z-index:3}
+tbody tr:hover td{background:var(--card2)}
+tbody tr:hover td.cat{background:var(--card2)}
+tr.tot td{background:var(--card2);font-weight:700}
+tr.tot:hover td{background:var(--card2)}
+tr.tot td.cat{background:var(--card2)}
+tr.sep td{height:6px;padding:0;background:var(--border);border:0}
+td.d{font-weight:650}
+.bar{display:inline-block;vertical-align:middle;width:74px;height:9px;position:relative;
+  background:linear-gradient(90deg,transparent 49.4%,var(--border2) 49.4%,var(--border2) 50.6%,transparent 50.6%)}
+.bar i{position:absolute;top:0;height:9px;border-radius:2px;display:block}
+.muted{color:var(--dim)}
+details{margin-top:10px}
+summary{cursor:pointer;font-size:.8rem;color:var(--sub);padding:6px 0;user-select:none}
+summary:hover{color:var(--green2)}
+.note{font-size:.75rem;color:var(--dim);margin-top:8px;line-height:1.6}
+.avisos{background:#fff7ed;border:1px solid #fdba74;color:#7c2d12;border-radius:var(--radius);
+  padding:10px 14px;margin-bottom:16px;font-size:.8rem}
+@media (prefers-color-scheme: dark){.avisos{background:#2a1a0d;border-color:#7c4a1d;color:#fbbf24}}
+footer{margin-top:40px;padding-top:14px;border-top:1px solid var(--border);
+  font-size:.72rem;color:var(--dim)}
+@media print{body{background:#fff}.scroll{overflow:visible}details{display:block}details>*{display:block}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1 id="titulo">TBM Dealer Analysis
+      <small id="subtitulo"></small>
+    </h1>
+    <div class="ctrl">
+      <label for="mes">Mes del reporte</label>
+      <select id="mes"></select>
+    </div>
+  </header>
+  <div id="avisos"></div>
+  <main id="app"></main>
+  <footer id="pie"></footer>
+</div>
+
+<script>
+const APP = /*__DATOS__*/null/*__FIN__*/;
+
+const NOMBRE_SEG = {tractores:"Tractores", cosechadoras:"Cosechadoras"};
+const TOT = ["AOR","TERRITORIO","PAIS"];
+const ET_TOT = {AOR:"AOR", TERRITORIO:"Territorio", PAIS:"País"};
+
+/* ---------- helpers ---------- */
+const nf = (v,d=1)=> v==null ? "—" :
+  v.toLocaleString("es-AR",{minimumFractionDigits:d,maximumFractionDigits:d});
+const nfa = v => v==null ? "—" : (Number.isInteger(v) ? nf(v,0) : nf(v,1));
+const pct = v => v==null ? "—" : nf(v,1)+"%";
+
+function variacion(act, ant){                    // % de cambio
+  if(act==null||ant==null||ant===0) return null;
+  return (act-ant)/ant*100;
+}
+function claseVar(v){ return v==null ? "flat" : (v>0.05 ? "up" : (v<-0.05 ? "down" : "flat")); }
+function flecha(v){ return v==null ? "" : (v>0.05 ? "▲" : (v<-0.05 ? "▼" : "▬")); }
+function txtVar(v,suf="%"){ return v==null ? "—" : (v>0?"+":"")+nf(v,1)+suf; }
+
+function celdaVar(v,suf="%"){
+  const c = claseVar(v);
+  return `<td class="d ${c}">${flecha(v)} ${txtVar(v,suf)}</td>`;
+}
+function celdaBarra(v,max){
+  if(v==null) return `<td class="muted">—</td>`;
+  const m = Math.max(max,1);
+  const w = Math.min(Math.abs(v)/m,1)*37;
+  const pos = v>=0;
+  const col = pos ? "var(--upfill)" : "var(--downfill)";
+  const st = pos ? `left:50%;width:${w}px` : `right:50%;width:${w}px`;
+  return `<td><span class="bar"><i style="${st};background:${col}"></i></span></td>`;
+}
+const fila = (seg,per,tipo)=> (seg.periodos[per]||[]).find(f=>f.tipo===tipo) || null;
+const val = (f,i)=> f ? (f.valores[i]==null?null:f.valores[i]) : null;
+
+/* ---------- KPIs de industria ---------- */
+function kpis(mes){
+  const cards = [];
+  for(const [k,seg] of Object.entries(mes.segmentos)){
+    const iF = fila(seg,"FYTD","industria"), iL = fila(seg,"LFYTD","industria");
+    if(!iF||!iL) continue;
+    const n = seg.columnas.length;
+    [["AOR",n-3],["PAIS",n-1]].forEach(([et,idx])=>{
+      const a = val(iF,idx), b = val(iL,idx), v = variacion(a,b);
+      cards.push(`<div class="kpi">
+        <div class="lbl">${NOMBRE_SEG[k]||k} · Industria ${ET_TOT[et]}</div>
+        <div class="big ${claseVar(v)}"><span class="arrow">${flecha(v)}</span>${txtVar(v)}</div>
+        <div class="cmp">FYTD <b>${nfa(a)}</b> vs LFYTD <b>${nfa(b)}</b> u.
+          <span class="${claseVar(v)}">(${a!=null&&b!=null?(a-b>0?"+":"")+nfa(a-b):"—"} u.)</span></div>
+      </div>`);
+    });
+  }
+  return `<h2>Variación de la industria · FYTD vs LFYTD</h2>
+    <div class="kpis">${cards.join("")}</div>
+    <p class="note">FYTD: acumulado del año fiscal en curso hasta el mes del reporte.
+    LFYTD: mismo período del año fiscal anterior. Unidades según el reporte TBM
+    (los decimales provienen del prorrateo de zonas del propio reporte).</p>`;
+}
+
+/* ---------- Tabla comparativa por categoría ---------- */
+function tablaComparativa(seg){
+  const cols = seg.columnas, n = cols.length;
+  const dF=fila(seg,"FYTD","dealer"), dL=fila(seg,"LFYTD","dealer");
+  const iF=fila(seg,"FYTD","industria"), iL=fila(seg,"LFYTD","industria");
+  const sF=fila(seg,"FYTD","share"), sL=fila(seg,"LFYTD","share");
+  const idxCat = cols.map((_,i)=>i).slice(0,n-3);
+  const idxTot = cols.map((_,i)=>i).slice(n-3);
+
+  const vars = idxCat.map(i=>variacion(val(iF,i),val(iL,i))).filter(v=>v!=null);
+  const max = Math.max(60, ...vars.map(Math.abs));
+
+  const fil = (i,cls)=>{
+    const et = cls ? (ET_TOT[cols[i]]||cols[i]) : cols[i];
+    const vi = variacion(val(iF,i),val(iL,i));
+    const vd = variacion(val(dF,i),val(dL,i));
+    const ds = (val(sF,i)!=null&&val(sL,i)!=null) ? val(sF,i)-val(sL,i) : null;
+    return `<tr class="${cls||""}">
+      <td class="cat">${et}</td>
+      <td>${nfa(val(iF,i))}</td><td class="muted">${nfa(val(iL,i))}</td>
+      ${celdaVar(vi)}${celdaBarra(vi,max)}
+      <td>${nfa(val(dF,i))}</td><td class="muted">${nfa(val(dL,i))}</td>
+      ${celdaVar(vd)}
+      <td>${pct(val(sF,i))}</td><td class="muted">${pct(val(sL,i))}</td>
+      ${celdaVar(ds," pp")}
+    </tr>`;
+  };
+
+  return `<div class="scroll"><table>
+    <thead>
+      <tr class="grp">
+        <th class="cat" rowspan="2">Categoría</th>
+        <th colspan="4">Industria (unidades)</th>
+        <th colspan="3">${dF?dF.nombre:"Dealer"} (unidades)</th>
+        <th colspan="3">Market Share</th>
+      </tr>
+      <tr>
+        <th>FYTD</th><th>LFYTD</th><th>Var.</th><th title="Variación de la industria"></th>
+        <th>FYTD</th><th>LFYTD</th><th>Var.</th>
+        <th>FYTD</th><th>LFYTD</th><th>Var.</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${idxCat.map(i=>fil(i,"")).join("")}
+      <tr class="sep"><td colspan="11"></td></tr>
+      ${idxTot.map(i=>fil(i,"tot")).join("")}
+    </tbody>
+  </table></div>`;
+}
+
+/* ---------- Tablas tal cual el PDF ---------- */
+function tablaPDF(seg,per){
+  const cols = seg.columnas, n = cols.length;
+  const filas = seg.periodos[per]||[];
+  if(!filas.length) return `<p class="note">Sin datos de ${per}.</p>`;
+  const th = cols.map((c,i)=>`<th${i>=n-3?' class="tot"':''}>${i>=n-3?(ET_TOT[c]||c):c}</th>`).join("");
+  const tr = filas.map(f=>`<tr class="${f.tipo==='industria'?'tot':''}">
+      <td class="cat">${f.nombre}</td>
+      ${f.valores.map(v=>`<td>${f.tipo==='share'?pct(v):nfa(v)}</td>`).join("")}
+    </tr>`).join("");
+  return `<div class="scroll"><table>
+    <thead><tr><th class="cat">${per}</th>${th}</tr></thead>
+    <tbody>${tr}</tbody></table></div>`;
+}
+
+function seccionSegmento(k,seg){
+  return `<h2>${NOMBRE_SEG[k]||k}</h2>
+    ${tablaComparativa(seg)}
+    <p class="note">Market Share: variación en puntos porcentuales (pp).
+    El dealer opera dentro de su AOR, por eso sus unidades se repiten en AOR,
+    Territorio y País: lo que cambia es contra qué universo se mide el share.</p>
+    <details>
+      <summary>Ver las tablas FYTD y LFYTD completas (formato del PDF)</summary>
+      <h3>FYTD</h3>${tablaPDF(seg,"FYTD")}
+      <h3>LFYTD</h3>${tablaPDF(seg,"LFYTD")}
+    </details>`;
+}
+
+/* ---------- Render ---------- */
+function render(clave){
+  const mes = APP.meses[clave];
+  document.getElementById("subtitulo").textContent =
+    `${mes.dealer} · ${mes.mes_es} · FYTD vs LFYTD`;
+  document.title = `TBM ${mes.dealer} — ${mes.mes_es}`;
+  const orden = ["tractores","cosechadoras"];
+  const segs = Object.entries(mes.segmentos)
+    .sort((a,b)=>orden.indexOf(a[0])-orden.indexOf(b[0]));
+  document.getElementById("app").innerHTML =
+    kpis(mes) + segs.map(([k,s])=>seccionSegmento(k,s)).join("");
+  document.getElementById("pie").innerHTML =
+    `Fuente: <b>${mes.archivo}</b> (John Deere TBM Dealer Analysis) · ` +
+    `procesado ${mes.procesado} · dashboard generado ${APP.generado}`;
+}
+
+function init(){
+  if(!APP || !APP.meses || !Object.keys(APP.meses).length){
+    document.getElementById("app").innerHTML =
+      "<p>No hay datos. Ejecutá <code>python procesar_tbm.py</code>.</p>";
+    return;
+  }
+  const claves = Object.keys(APP.meses).sort().reverse();
+  const sel = document.getElementById("mes");
+  sel.innerHTML = claves.map(c=>`<option value="${c}">${APP.meses[c].mes_es}</option>`).join("");
+  sel.onchange = ()=>render(sel.value);
+  if(claves.length===1) sel.parentElement.style.display="none";
+  if(APP.avisos && APP.avisos.length){
+    document.getElementById("avisos").innerHTML =
+      `<div class="avisos"><b>Avisos del procesamiento:</b><br>${APP.avisos.join("<br>")}</div>`;
+  }
+  render(claves[0]);
+}
+init();
+</script>
+</body>
+</html>

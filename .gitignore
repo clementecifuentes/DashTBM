@@ -1,0 +1,7 @@
+# Reportes originales: no se publican
+datos/*.pdf
+datos/*.PDF
+
+__pycache__/
+*.pyc
+.claude/
