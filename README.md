@@ -27,7 +27,11 @@ Una sola página, en dos bloques:
    columna para resaltarla en las dos tablas a la vez.
 2. **Evolución mensual por tipo de máquina** — una línea por cada tipo de las
    tablas (14 bandas de potencia, 4 clases de cosechadora), todas en el mismo
-   gráfico. La leyenda de abajo apaga y prende cada una. Al pasar el mouse se
+   gráfico. **Segmento y medida aceptan las dos opciones a la vez**: se pueden
+   ver tractores y cosechadoras juntos, e industria y Cetomaq juntos, hasta 36
+   líneas. El color sigue al tipo de máquina y el trazo a la medida —llena la
+   industria, punteada Cetomaq— así los dos ejes de elección no se pisan. Nunca
+   se pueden apagar las dos opciones de un mismo grupo: siempre queda una. La leyenda de abajo apaga y prende cada una. Al pasar el mouse se
    aísla la línea más cercana y el resto se atenúa. Filtro de rango
    (desde / hasta), de segmento y de medida (industria o dealer). Debajo se
    calcula la variación entre los meses y los tipos visibles: valor inicial,

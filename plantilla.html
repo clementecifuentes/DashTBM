@@ -73,6 +73,7 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--jd);outline-of
 .seg button{font:inherit;font-size:.81rem;border:0;background:none;color:var(--ink-2);
   padding:5px 15px;border-radius:5px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--jd);color:#fff;font-weight:650}
+.seg button[aria-pressed="false"]:hover{background:var(--jd-cl);color:var(--jd)}
 
 /* ---------- tablas ---------- */
 .caja{background:var(--sup);border:1px solid var(--line);border-radius:8px;
@@ -110,6 +111,14 @@ polyline.serie{stroke-dasharray:1;stroke-dashoffset:1;
   animation:trazo .85s cubic-bezier(.25,.8,.3,1) forwards;
   animation-delay:calc(var(--i,0) * 28ms)}
 @keyframes trazo{to{stroke-dashoffset:0}}
+/* al terminar el trazado la linea de Cetomaq queda punteada */
+polyline.serie.punteada{animation-name:trazo,puntear;
+  animation-duration:.85s,.01s;animation-delay:calc(var(--i,0)*28ms),
+  calc(var(--i,0)*28ms + .85s);animation-fill-mode:forwards,forwards}
+@keyframes puntear{to{stroke-dasharray:5 3;stroke-dashoffset:0}}
+@media (prefers-reduced-motion: reduce){
+  polyline.serie.punteada{animation:none;stroke-dasharray:5 3;stroke-dashoffset:0}
+}
 .serie.foco{filter:drop-shadow(0 1.5px 3px rgba(0,0,0,.28))}
 #area-foco{transition:opacity .18s ease;pointer-events:none}
 #marcas-foco circle{pointer-events:none}
@@ -149,6 +158,9 @@ polyline.serie{stroke-dasharray:1;stroke-dashoffset:1;
   display:inline-flex;align-items:center;gap:6px}
 .ly i{width:11px;height:3px;border-radius:2px;background:var(--c,var(--line-2));flex:none}
 .ly[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
+.ly-grupo{font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;
+  color:var(--ink-3);font-weight:700;align-self:center;margin:0 2px 0 6px}
+.ly-grupo:first-child{margin-left:0}
 .ly:hover{border-color:var(--jd);color:var(--ink)}
 .acciones{display:flex;gap:7px;margin-left:auto}
 .acc{font:inherit;font-size:.72rem;border:1px solid var(--line-2);background:var(--sup);
@@ -316,7 +328,8 @@ const sgn = (v,d=1) => v==null ? "—" : (v>0?"+":"")+num(v,d);
 
 const S = {
   clave:null, seg:"tractores",  col:null,
-  segG:"tractores", medida:"industria",
+  segs:{tractores:true, cosechadoras:false},
+  medidas:{industria:true, dealer:false},
   desde:null, hasta:null,
   apagadas:{},        /* seg|key -> true */
   foco:null,
@@ -365,12 +378,20 @@ function eje(){
   return ejeCompleto().filter(function(p){ return p.clave>=S.desde && p.clave<=S.hasta; });
 }
 function tipos(seg){ return ((APP.series[seg]||{}).categorias) || []; }
-function valorDe(seg,key,clave){
+function valorDe(seg,key,clave,med){
   const p = puntos(seg).find(function(p){ return p.clave===clave; });
   if(!p) return null;
-  const v = (p[S.medida]||{})[key];
+  const v = (p[med]||{})[key];
   return v===undefined ? null : v;
 }
+function segsActivos(){
+  return ["tractores","cosechadoras"].filter(function(x){
+    return S.segs[x] && puntos(x).length; });
+}
+function medidasActivas(){
+  return ["industria","dealer"].filter(function(m){ return S.medidas[m]; });
+}
+const MED_ES = {industria:"Industria", dealer:"Cetomaq"};
 const apagada = (seg,key)=> !!S.apagadas[seg+"|"+key];
 
 function pasoLindo(bruto){
@@ -383,16 +404,19 @@ function pasoLindo(bruto){
 function hayEventos(){ return !!(IND && IND.eventos && IND.eventos.length); }
 
 function dibujar(){
-  const E = eje(), seg = S.segG, cont = document.getElementById("chart-hold");
-  const cats = tipos(seg);
+  const E = eje(), cont = document.getElementById("chart-hold");
+  const segs = segsActivos(), meds = medidasActivas();
+  const nTipos = segs.reduce(function(n,sg){ return n + tipos(sg).length; }, 0);
+  const nVis = segs.reduce(function(n,sg){
+    return n + tipos(sg).filter(function(c){ return !apagada(sg,c.key); }).length; }, 0);
 
   document.getElementById("chart-tit").textContent =
-    "Unidades vendidas por mes · " + SEG_ES[seg] + " · " +
-    (S.medida==="industria" ? "toda la industria del AOR" : "Cetomaq");
+    "Unidades vendidas por mes · " + segs.map(function(x){ return SEG_ES[x]; }).join(" y ")
+    + " · " + meds.map(function(m){ return MED_ES[m]; }).join(" y ");
   document.getElementById("chart-sub").textContent =
     E.length ? (E[0].mes + " a " + E[E.length-1].mes + " · unidades por mes · " +
-      cats.length + " tipos de máquina, " +
-      cats.filter(function(c){ return !apagada(seg,c.key); }).length + " visibles" +
+      nVis + " de " + nTipos + " tipos de máquina" +
+      (meds.length>1 ? " · línea llena es industria, punteada es Cetomaq" : "") +
       (S.ov.retenciones && hayEventos() ? " · la cinta amarilla es la retención a la soja" : "") +
       (S.ov.tc ? " · la tira de abajo es el dólar oficial" : "")) : "";
 
@@ -413,14 +437,26 @@ function dibujar(){
   const x = i => mL + i*iw/(E.length-1);
 
   let maxV=0, minV=0;
-  const datos = cats.map(function(c,idx){
-    const pts = E.map(function(e,i){
-      const v = valorDe(seg,c.key,e.clave);
-      if(!apagada(seg,c.key) && v!=null){ if(v>maxV) maxV=v; if(v<minV) minV=v; }
-      return {i:i, v:v};
+  // Una serie por cada combinacion tipo de maquina x medida. El color sigue al
+  // tipo (rampa por potencia) y el trazo a la medida: llena industria,
+  // punteada Cetomaq. Asi los dos ejes de eleccion no se pisan.
+  const datos = [];
+  segs.forEach(function(sg){
+    const cats = tipos(sg);
+    cats.forEach(function(c,idx){
+      const off = apagada(sg,c.key);
+      meds.forEach(function(med){
+        const pts = E.map(function(e,i){
+          const v = valorDe(sg,c.key,e.clave,med);
+          if(!off && v!=null){ if(v>maxV) maxV=v; if(v<minV) minV=v; }
+          return {i:i, v:v};
+        });
+        datos.push({id:sg+"|"+c.key+"|"+med, seg:sg, key:c.key, med:med,
+                    label:c.label, color:colorDe(sg,idx,cats.length),
+                    punteada: med==="dealer" && meds.length>1,
+                    off:off, pts:pts});
+      });
     });
-    return {key:c.key, label:c.label, color:colorDe(seg,idx,cats.length),
-            off:apagada(seg,c.key), pts:pts};
   });
 
   const paso = pasoLindo(Math.max(4,maxV*1.12)/5);
@@ -471,8 +507,8 @@ function dibujar(){
     if(act.length) tramos.push(act);
     return tramos.map(function(t){
       return t.length===1
-        ? '<circle class="serie" data-k="'+esc(d.key)+'" cx="'+t[0].split(",")[0]+'" cy="'+t[0].split(",")[1]+'" r="3" fill="'+d.color+'"/>'
-        : '<polyline class="serie" data-k="'+esc(d.key)+'" points="'+t.join(" ")+'" pathLength="1" style="--i:'+orden+'" fill="none" stroke="'+d.color+'" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"/>';
+        ? '<circle class="serie" data-k="'+esc(d.id)+'" cx="'+t[0].split(",")[0]+'" cy="'+t[0].split(",")[1]+'" r="3" fill="'+d.color+'"/>'
+        : '<polyline class="serie'+(d.punteada?" punteada":"")+'" data-k="'+esc(d.id)+'" points="'+t.join(" ")+'" pathLength="1" style="--i:'+orden+'" fill="none" stroke="'+d.color+'" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"/>';
     }).join("");
   }).join("");
 
@@ -618,8 +654,14 @@ function dibujar(){
     const top = orden.slice(0,7);
     if(foco && top.indexOf(foco)<0) top.unshift(foco);
     let filas = top.map(function(d){
-      return '<div class="r'+(foco===d?" foco":"")+'"><span><i class="pt" style="background:'+d.color+'"></i>'
-        +esc(d.label)+'</span><b>'+uni(d.pts[i].v)+'</b></div>'; }).join("");
+      const marca = d.punteada
+        ? 'background:repeating-linear-gradient(90deg,'+d.color+' 0 3px,transparent 3px 5px)'
+        : 'background:'+d.color;
+      const suf = (segs.length>1 ? " · "+(d.seg==="cosechadoras"?"cos.":"tract.") : "")
+                + (meds.length>1 ? " · "+MED_ES[d.med] : "");
+      return '<div class="r'+(foco===d?" foco":"")+'"><span><i class="pt" style="'+marca+'"></i>'
+        +esc(d.label)+'<span class="mut">'+esc(suf)+'</span></span><b>'
+        +uni(d.pts[i].v)+'</b></div>'; }).join("");
     if(orden.length>top.length)
       filas += '<div class="r"><span>+'+(orden.length-top.length)+' tipos más</span></div>';
     const tot = orden.reduce(function(s,d){ return s+d.pts[i].v; },0);
@@ -633,34 +675,39 @@ function dibujar(){
   cont.querySelector("#cap").addEventListener("mouseleave", function(){
     tip.style.opacity="0"; cruz.setAttribute("opacity","0"); pintarFoco(null); });
 
-  pintarLeyenda(datos);
-  variaciones(E, datos.filter(function(d){ return !d.off; }));
+  pintarLeyenda();
+  variaciones(E, datos.filter(function(d){ return !d.off; }), meds);
   dibujarFlot();
 }
 
-function pintarLeyenda(datos){
-  const seg = S.segG;
-  const cats = tipos(seg);
-  const cols = datos || cats.map(function(c,i){
-    return {key:c.key,label:c.label,color:colorDe(seg,i,cats.length),off:apagada(seg,c.key)}; });
-  document.getElementById("leyenda").innerHTML =
-    cols.map(function(d){
-      return '<button class="ly" type="button" data-k="'+esc(d.key)+'" aria-pressed="'+(!d.off)+'" '
-        +'style="--c:'+d.color+'"><i></i>'+esc(d.label)+'</button>'; }).join("")
-    + '<span class="acciones"><button class="acc" data-todo="on">Mostrar todas</button>'
-    + '<button class="acc" data-todo="off">Ocultar todas</button></span>';
+function pintarLeyenda(){
+  const segs = segsActivos();
+  let html = "";
+  segs.forEach(function(sg){
+    const cats = tipos(sg);
+    if(segs.length>1) html += '<span class="ly-grupo">'+SEG_ES[sg]+'</span>';
+    html += cats.map(function(c,i){
+      return '<button class="ly" type="button" data-seg="'+sg+'" data-k="'+esc(c.key)+'" '
+        +'aria-pressed="'+(!apagada(sg,c.key))+'" style="--c:'+colorDe(sg,i,cats.length)+'">'
+        +'<i></i>'+esc(c.label)+'</button>'; }).join("");
+  });
+  html += '<span class="acciones"><button class="acc" data-todo="on">Mostrar todas</button>'
+        + '<button class="acc" data-todo="off">Ocultar todas</button></span>';
+  document.getElementById("leyenda").innerHTML = html;
   document.querySelectorAll("#leyenda [data-k]").forEach(function(b){
     b.onclick = function(){
-      const id = seg+"|"+b.dataset.k;
+      const id = b.dataset.seg+"|"+b.dataset.k;
       if(S.apagadas[id]) delete S.apagadas[id]; else S.apagadas[id]=true;
       dibujar();
     };
   });
   document.querySelectorAll("#leyenda [data-todo]").forEach(function(b){
     b.onclick = function(){
-      tipos(seg).forEach(function(c){
-        const id = seg+"|"+c.key;
-        if(b.dataset.todo==="off") S.apagadas[id]=true; else delete S.apagadas[id];
+      segsActivos().forEach(function(sg){
+        tipos(sg).forEach(function(c){
+          const id = sg+"|"+c.key;
+          if(b.dataset.todo==="off") S.apagadas[id]=true; else delete S.apagadas[id];
+        });
       });
       dibujar();
     };
@@ -668,7 +715,7 @@ function pintarLeyenda(datos){
 }
 
 /* ========= variacion entre los meses y tipos elegidos ========= */
-function variaciones(E, datos){
+function variaciones(E, datos, meds){
   const cont = document.getElementById("variaciones");
   if(!datos.length){ cont.innerHTML=""; return; }
   const a=E[0], b=E[E.length-1];
@@ -678,9 +725,15 @@ function variaciones(E, datos){
     const dif=(ini!=null&&fin!=null)?fin-ini:null;
     const pc=(ini!=null&&fin!=null&&ini>0&&fin>=0)?(fin-ini)/ini*100:null;
     const tot=vals.reduce(function(s,v){return s+v;},0);
-    return '<tr><td class="cat"><i style="display:inline-block;width:12px;height:3px;'
-      +'border-radius:2px;background:'+d.color+';vertical-align:middle;margin-right:8px"></i>'
-      +esc(d.label)+'</td>'
+    // el trazo del cuadradito repite el del grafico: lleno industria, cortado dealer
+    const trazo = d.punteada
+      ? 'background:repeating-linear-gradient(90deg,'+d.color+' 0 4px,transparent 4px 7px)'
+      : 'background:'+d.color;
+    const sufijo = (segsActivos().length>1 ? " · "+(d.seg==="cosechadoras"?"cosechadoras":"tractores") : "")
+      + ((meds && meds.length>1) ? " · "+MED_ES[d.med] : "");
+    return '<tr><td class="cat"><i style="display:inline-block;width:14px;height:3px;'
+      +'border-radius:2px;'+trazo+';vertical-align:middle;margin-right:8px"></i>'
+      +esc(d.label)+'<span class="mut" style="font-weight:400">'+esc(sufijo)+'</span></td>'
       +'<td>'+uni(ini)+'</td><td>'+uni(fin)+'</td>'
       +'<td class="'+cls(dif)+'">'+sgn(dif)+'</td>'
       +'<td class="'+cls(pc)+'">'+(pc==null?"—":sgn(pc)+"%")+'</td>'
@@ -691,7 +744,8 @@ function variaciones(E, datos){
     return s + d.pts.reduce(function(t,p){ return t+(p.v||0); },0); },0);
   cont.innerHTML =
     '<div class="tit-tabla">Variación entre '+esc(a.mes)+' y '+esc(b.mes)+' · '
-      +SEG_ES[S.segG]+' · '+(S.medida==="industria"?"industria":"Cetomaq")+'</div>'
+      +segsActivos().map(function(x){return SEG_ES[x];}).join(" y ")+' · '
+      +medidasActivas().map(function(m){return MED_ES[m];}).join(" y ")+'</div>'
     +'<div class="caja"><div class="scroll"><table><thead><tr>'
       +'<th class="cat">Tipo de máquina</th><th>'+esc(a.mes)+'</th><th>'+esc(b.mes)+'</th>'
       +'<th>Δ u.</th><th>Δ %</th><th class="sep-l">Total del rango</th><th>Promedio mensual</th>'
@@ -908,16 +962,21 @@ function armarControles(){
     +'<div class="campo"><span>Desde</span><select id="desde">'+ops(S.desde)+'</select></div>'
     +'<div class="campo"><span>Hasta</span><select id="hasta">'+ops(S.hasta)+'</select></div>';
 
-  document.querySelectorAll("#segG button").forEach(function(b){
-    b.onclick=function(){ S.segG=b.dataset.s;
-      document.querySelectorAll("#segG button").forEach(function(o){
-        o.setAttribute("aria-pressed", String(o===b)); });
-      dibujar(); }; });
-  document.querySelectorAll("#medida button").forEach(function(b){
-    b.onclick=function(){ S.medida=b.dataset.m;
-      document.querySelectorAll("#medida button").forEach(function(o){
-        o.setAttribute("aria-pressed", String(o===b)); });
-      dibujar(); }; });
+  // Los dos grupos aceptan varias opciones a la vez; siempre queda una prendida.
+  function alterna(sel, estado, clave){
+    document.querySelectorAll(sel).forEach(function(b){
+      b.onclick=function(){
+        const k = b.dataset[clave];
+        const prendidas = Object.keys(estado).filter(function(x){ return estado[x]; });
+        if(estado[k] && prendidas.length===1) return;   // no dejar el grafico vacio
+        estado[k] = !estado[k];
+        b.setAttribute("aria-pressed", String(estado[k]));
+        dibujar();
+      };
+    });
+  }
+  alterna("#segG button", S.segs, "s");
+  alterna("#medida button", S.medidas, "m");
   document.querySelectorAll("#ov-chips [data-ov]").forEach(function(b){
     b.onclick=function(){
       S.ov[b.dataset.ov] = !S.ov[b.dataset.ov];
