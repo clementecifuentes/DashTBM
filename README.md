@@ -7,6 +7,11 @@ categoría.
 
 **https://clementecifuentes.github.io/DashTBM/**
 
+Copia congelada del 11-09-2026, por si hace falta una versión que no cambie
+durante una presentación: **/estable.html**. Es un archivo aparte, no se
+regenera. El mismo punto está etiquetado en git como `v1-estable`; para volver
+a él: `git checkout v1-estable`.
+
 ## Actualización mensual
 
 1. Copiar el PDF nuevo a `datos/`
