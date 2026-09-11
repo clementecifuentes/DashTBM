@@ -76,6 +76,28 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--jd);outline-of
 .seg button[aria-pressed="false"]:hover{background:var(--jd-cl);color:var(--jd)}
 
 /* ---------- tablas ---------- */
+/* ---------- fichas de cabecera ---------- */
+.fichas{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:14px;margin:26px 0 6px}
+.ficha{background:var(--sup);border:1px solid var(--line);border-radius:8px;
+  box-shadow:var(--sombra);padding:15px 17px;border-top:3px solid var(--jd)}
+.ficha.dealer{border-top-color:var(--amarillo)}
+.ficha .quien{font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;
+  font-weight:700;color:var(--jd)}
+.ficha.dealer .quien{color:#9a7d00}
+.ficha .alcance{font-size:.7rem;color:var(--ink-3);margin-top:1px}
+.ficha .total{font-size:1.85rem;font-weight:650;letter-spacing:-.03em;
+  margin:9px 0 0;line-height:1.05;font-variant-numeric:tabular-nums}
+.ficha .total small{font-size:.8rem;font-weight:500;color:var(--ink-3);
+  letter-spacing:0;margin-left:5px}
+.ficha .var{font-size:.85rem;font-weight:650;margin-top:7px;
+  display:flex;align-items:center;gap:6px}
+.ficha .contra{font-size:.73rem;color:var(--ink-3);margin-top:2px;line-height:1.5}
+.ficha .extra{font-size:.73rem;color:var(--ink-2);margin-top:9px;padding-top:8px;
+  border-top:1px dashed var(--line-2)}
+.ficha .extra b{color:var(--ink)}
+.fichas-nota{font-size:.73rem;color:var(--ink-3);margin:2px 0 0}
+
 .caja{background:var(--sup);border:1px solid var(--line);border-radius:8px;
   overflow:hidden;box-shadow:var(--sombra)}
 .scroll{overflow-x:auto}
@@ -241,6 +263,9 @@ footer{margin-top:52px;padding-top:15px;border-top:1px solid var(--line);
 <div class="wrap">
   <div id="avisos"></div>
 
+  <div class="fichas" id="fichas"></div>
+  <p class="fichas-nota" id="fichas-nota"></p>
+
   <section>
     <div class="rotulo"><i></i><b>Tablas del informe</b></div>
     <p class="lead">Tal cual salen del PDF. Click en el encabezado de una columna
@@ -277,7 +302,6 @@ footer{margin-top:52px;padding-top:15px;border-top:1px solid var(--line);
     <div style="margin-top:12px">
       <button class="abrir-ind" type="button" id="abrir-ind"><i></i>Tasas e indicadores</button>
     </div>
-    <div id="variaciones"></div>
   </section>
 
   <div class="flot" id="flot" hidden role="dialog" aria-label="Tasas e indicadores">
@@ -325,6 +349,8 @@ const uni = v => v==null ? "—" : (Number.isInteger(v) ? num(v,0) : num(v,1));
 const esc = s => String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const cls = v => v==null ? "flat" : (v>0.05 ? "up" : (v<-0.05 ? "down" : "flat"));
 const sgn = (v,d=1) => v==null ? "—" : (v>0?"+":"")+num(v,d);
+const flecha = v => v==null ? "" : (v>0.05 ? "▲" : (v<-0.05 ? "▼" : "■"));
+const txtVar = (v,suf="%") => v==null ? "—" : (v>0?"+":"")+num(v,1)+suf;
 
 const S = {
   clave:null, seg:"tractores",  col:null,
@@ -422,7 +448,7 @@ function dibujar(){
 
   if(E.length<2){
     cont.innerHTML = '<p class="nota">Elegí un rango de al menos dos meses.</p>';
-    document.getElementById("variaciones").innerHTML=""; pintarLeyenda(); return;
+    pintarLeyenda(); pintarFichas(E); return;
   }
 
   const hayEv = IND && IND.eventos && IND.eventos.length;
@@ -676,7 +702,7 @@ function dibujar(){
     tip.style.opacity="0"; cruz.setAttribute("opacity","0"); pintarFoco(null); });
 
   pintarLeyenda();
-  variaciones(E, datos.filter(function(d){ return !d.off; }), meds);
+  pintarFichas(E);
   dibujarFlot();
 }
 
@@ -714,48 +740,80 @@ function pintarLeyenda(){
   });
 }
 
-/* ========= variacion entre los meses y tipos elegidos ========= */
-function variaciones(E, datos, meds){
-  const cont = document.getElementById("variaciones");
-  if(!datos.length){ cont.innerHTML=""; return; }
-  const a=E[0], b=E[E.length-1];
-  const filas = datos.map(function(d){
-    const vals = d.pts.map(function(p){return p.v;}).filter(function(v){return v!=null;});
-    const ini=d.pts[0].v, fin=d.pts[d.pts.length-1].v;
-    const dif=(ini!=null&&fin!=null)?fin-ini:null;
-    const pc=(ini!=null&&fin!=null&&ini>0&&fin>=0)?(fin-ini)/ini*100:null;
-    const tot=vals.reduce(function(s,v){return s+v;},0);
-    // el trazo del cuadradito repite el del grafico: lleno industria, cortado dealer
-    const trazo = d.punteada
-      ? 'background:repeating-linear-gradient(90deg,'+d.color+' 0 4px,transparent 4px 7px)'
-      : 'background:'+d.color;
-    const sufijo = (segsActivos().length>1 ? " · "+(d.seg==="cosechadoras"?"cosechadoras":"tractores") : "")
-      + ((meds && meds.length>1) ? " · "+MED_ES[d.med] : "");
-    return '<tr><td class="cat"><i style="display:inline-block;width:14px;height:3px;'
-      +'border-radius:2px;'+trazo+';vertical-align:middle;margin-right:8px"></i>'
-      +esc(d.label)+'<span class="mut" style="font-weight:400">'+esc(sufijo)+'</span></td>'
-      +'<td>'+uni(ini)+'</td><td>'+uni(fin)+'</td>'
-      +'<td class="'+cls(dif)+'">'+sgn(dif)+'</td>'
-      +'<td class="'+cls(pc)+'">'+(pc==null?"—":sgn(pc)+"%")+'</td>'
-      +'<td class="sep-l">'+uni(tot)+'</td>'
-      +'<td>'+uni(vals.length?tot/vals.length:null)+'</td></tr>';
-  }).join("");
-  const totRango = datos.reduce(function(s,d){
-    return s + d.pts.reduce(function(t,p){ return t+(p.v||0); },0); },0);
-  cont.innerHTML =
-    '<div class="tit-tabla">Variación entre '+esc(a.mes)+' y '+esc(b.mes)+' · '
-      +segsActivos().map(function(x){return SEG_ES[x];}).join(" y ")+' · '
-      +medidasActivas().map(function(m){return MED_ES[m];}).join(" y ")+'</div>'
-    +'<div class="caja"><div class="scroll"><table><thead><tr>'
-      +'<th class="cat">Tipo de máquina</th><th>'+esc(a.mes)+'</th><th>'+esc(b.mes)+'</th>'
-      +'<th>Δ u.</th><th>Δ %</th><th class="sep-l">Total del rango</th><th>Promedio mensual</th>'
-    +'</tr></thead><tbody>'+filas
-    +'<tr class="ind"><td class="cat">Total de los tipos visibles</td><td colspan="4"></td>'
-      +'<td class="sep-l">'+uni(totRango)+'</td><td></td></tr>'
-    +'</tbody></table></div></div>'
-    +'<p class="nota">Δ compara el mes inicial contra el final, que mes a mes puede ser ruidoso; '
-    +'el total y el promedio del rango son más estables para juzgar el período completo. '
-    +'Un mes puede dar negativo: el reporte reasigna unidades entre AOR de un informe al siguiente.</p>';
+/* ============ fichas de cabecera ============
+   Reflejan lo mismo que mostraba la tabla de variaciones, pero resumido a dos
+   numeros y arriba de todo: total del rango para la industria y para Cetomaq,
+   y cuanto vario contra el mismo tramo del anio fiscal anterior. Cambian con
+   el rango, el segmento y los tipos que tengas prendidos. */
+function mesAntes(clave){
+  const a = +clave.slice(0,4), m = clave.slice(5);
+  return (a-1)+"-"+m;
+}
+function totalRango(E, med){
+  let suma = 0, hay = false;
+  segsActivos().forEach(function(sg){
+    tipos(sg).forEach(function(c){
+      if(apagada(sg,c.key)) return;
+      E.forEach(function(e){
+        const v = valorDe(sg,c.key,e.clave,med);
+        if(v!=null){ suma += v; hay = true; }
+      });
+    });
+  });
+  return hay ? suma : null;
+}
+function pintarFichas(E){
+  const cont = document.getElementById("fichas");
+  const nota = document.getElementById("fichas-nota");
+  if(!E.length){ cont.innerHTML=""; nota.textContent=""; return; }
+
+  // mismo tramo del anio fiscal anterior, solo si esta completo en el historico
+  const todos = ejeCompleto().map(function(p){ return p.clave; });
+  const previo = E.map(function(p){ return mesAntes(p.clave); });
+  const completo = previo.every(function(c){ return todos.indexOf(c)>=0; });
+  const Eprev = completo ? previo.map(function(c){
+      return ejeCompleto().find(function(p){ return p.clave===c; }); }) : null;
+
+  const etRango = E[0].mes + " a " + E[E.length-1].mes;
+  const etPrev = Eprev ? (Eprev[0].mes + " a " + Eprev[Eprev.length-1].mes) : null;
+  const alcance = segsActivos().map(function(x){ return SEG_ES[x]; }).join(" y ");
+
+  const ficha = function(med, clase){
+    const act = totalRango(E, med);
+    const ant = Eprev ? totalRango(Eprev, med) : null;
+    const v = (act!=null && ant!=null && ant!==0) ? (act-ant)/ant*100 : null;
+    const dif = (act!=null && ant!=null) ? act-ant : null;
+    let bloque;
+    if(ant==null){
+      bloque = '<div class="contra">No hay un tramo equivalente del año fiscal '
+             + 'anterior cargado, así que no hay contra qué comparar.</div>';
+    } else {
+      bloque = '<div class="var '+cls(v)+'">'+flecha(v)+' '+txtVar(v)+'</div>'
+             + '<div class="contra">contra <b>'+uni(ant)+'</b> u. en '+esc(etPrev)
+             + ' · '+sgn(dif)+' u.</div>';
+    }
+    return '<div class="ficha '+clase+'">'
+      + '<div class="quien">'+(med==="industria"?"Industria del AOR":"Cetomaq")+'</div>'
+      + '<div class="alcance">'+esc(alcance)+' · '+esc(etRango)+'</div>'
+      + '<div class="total">'+uni(act)+'<small>unidades</small></div>'
+      + bloque + '</div>';
+  };
+
+  const ind = totalRango(E,"industria"), dea = totalRango(E,"dealer");
+  const share = (ind && dea!=null) ? dea/ind*100 : null;
+  let html = ficha("industria","") + ficha("dealer","dealer");
+  cont.innerHTML = html;
+  const extra = document.querySelectorAll(".ficha")[1];
+  if(extra && share!=null)
+    extra.insertAdjacentHTML("beforeend",
+      '<div class="extra">Market share del período: <b>'+num(share,1)+'%</b></div>');
+
+  const nVis = segsActivos().reduce(function(n,sg){
+    return n + tipos(sg).filter(function(c){ return !apagada(sg,c.key); }).length; }, 0);
+  const nTot = segsActivos().reduce(function(n,sg){ return n + tipos(sg).length; }, 0);
+  nota.textContent = "Suman los " + nVis + " de " + nTot + " tipos de máquina que "
+    + "tenés prendidos en el gráfico, y se mueven con el rango de meses."
+    + (Eprev ? "" : " Elegí un rango que tenga su equivalente del año anterior para ver la variación.");
 }
 
 /* ==================== contexto ==================== */
@@ -1017,8 +1075,12 @@ function init(){
   const claves=Object.keys(APP.meses).sort();
   S.clave=claves[claves.length-1];
   const todos=ejeCompleto();
-  S.desde=todos.length?todos[0].clave:null;
-  S.hasta=todos.length?todos[todos.length-1].clave:null;
+  S.hasta = todos.length ? todos[todos.length-1].clave : null;
+  // Arranca en el año fiscal en curso: es el tramo que tiene su equivalente del
+  // año anterior, así las fichas muestran variación desde el primer momento.
+  const fyAct = todos.length ? todos[todos.length-1].fy : null;
+  const delFy = todos.filter(function(p){ return p.fy===fyAct; });
+  S.desde = delFy.length ? delFy[0].clave : (todos.length ? todos[0].clave : null);
 
   const sel=document.getElementById("mes");
   sel.innerHTML=claves.slice().reverse().map(function(c){

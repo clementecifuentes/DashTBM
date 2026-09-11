@@ -20,7 +20,14 @@ El paso 3 lee todos los PDF de `datos/`, acumula cada mes en
 
 ## Qué muestra
 
-Una sola página, en dos bloques:
+Una sola página:
+
+0. **Dos fichas arriba de todo** — total de unidades del rango elegido, una para
+   la industria del AOR y otra para Cetomaq, con la variación contra el mismo
+   tramo del año fiscal anterior y el market share del período. Se mueven con
+   todo lo que filtres abajo: rango de meses, segmento y tipos de máquina
+   prendidos. Si el rango no tiene su equivalente del año anterior cargado, lo
+   dice en vez de comparar contra un tramo incompleto.
 
 1. **Tablas del informe** — FYTD y LFYTD tal cual salen del PDF, sin nada
    calculado encima. Selector de segmento arriba; click en el encabezado de una
@@ -34,8 +41,7 @@ Una sola página, en dos bloques:
    se pueden apagar las dos opciones de un mismo grupo: siempre queda una. La leyenda de abajo apaga y prende cada una. Al pasar el mouse se
    aísla la línea más cercana y el resto se atenúa. Filtro de rango
    (desde / hasta), de segmento y de medida (industria o dealer). Debajo se
-   calcula la variación entre los meses y los tipos visibles: valor inicial,
-   final, Δ en unidades, Δ %, total del rango y promedio mensual.
+   El resumen de todo eso sube a las fichas de arriba.
 3. **Proyección sobre el gráfico** — tres interruptores encima del gráfico de
    ventas:
    - *Decretos*: línea vertical con un punto amarillo en el mes de cada decreto;
@@ -71,6 +77,10 @@ Un mes puede dar **negativo**: el reporte reasigna unidades entre AOR de un
 informe al siguiente, así que el FYTD del AOR a veces baja. Cuando un extremo
 del rango es cero o negativo el Δ % se muestra como `—`, porque no es
 interpretable.
+
+El rango de meses arranca por defecto en el **año fiscal en curso**, que es el
+tramo que tiene su equivalente del año anterior y deja las fichas con algo que
+comparar desde el primer momento.
 
 ## Cómo se leen los números
 
