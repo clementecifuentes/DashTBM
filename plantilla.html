@@ -36,12 +36,77 @@
   }
 }
 *{box-sizing:border-box}
+
+/* ---------- terminacion visual ----------
+   Todo lo de abajo es cosmetico: ningun efecto cambia un numero. Al final del
+   bloque, prefers-reduced-motion los apaga a todos. */
+
+/* Aparicion escalonada al entrar en pantalla. Deliberadamente SIN fill-mode:
+   el estado de reposo del elemento es visible, la animacion solo lo trae desde
+   transparente. Asi ningun efecto puede dejar la pagina en blanco. */
+@keyframes entraBloque{from{opacity:0;transform:translateY(14px)}
+                       to{opacity:1;transform:none}}
+.entra{animation:entraBloque .52s cubic-bezier(.22,.7,.3,1)}
+
+/* numeros que entran solos cuando se recalcula la ficha */
+@keyframes subeNumero{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.ficha .hoy{animation:subeNumero .42s cubic-bezier(.22,.7,.3,1) both}
+.ficha .linea:nth-child(2) .hoy{animation-delay:.04s}
+.ficha .linea:nth-child(3) .hoy{animation-delay:.08s}
+.ficha .linea:nth-child(4) .hoy{animation-delay:.12s}
+.ficha .delta{animation:subeNumero .42s cubic-bezier(.22,.7,.3,1) both;animation-delay:.06s}
+.ficha .linea{border-radius:5px;margin:0 -7px;padding:3px 7px;
+  transition:background .16s ease}
+.ficha .linea:hover{background:var(--sup-2)}
+
+
+/* cajas que responden al mouse */
+.caja,.panel,.ficha{transition:box-shadow .2s ease, border-color .2s ease}
+.caja:hover,.panel:hover{box-shadow:0 1px 2px rgba(22,24,15,.06), 0 6px 22px rgba(22,24,15,.09)}
+
+/* controles con algo de vida */
+.seg button,.ly,.acc,.ov,.chip,.abrir-ind,.mini{
+  transition:background .16s ease, color .16s ease, border-color .16s ease,
+             transform .12s ease, box-shadow .16s ease}
+.seg button:hover{transform:translateY(-1px)}
+.seg button[aria-pressed="true"]{box-shadow:0 2px 6px rgba(54,124,43,.32)}
+.ly:hover,.ov:hover,.acc:hover{transform:translateY(-1px)}
+.abrir-ind:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(54,124,43,.34)}
+.abrir-ind:active,.seg button:active,.ly:active{transform:translateY(0)}
+.mini:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.10)}
+
+/* columna resaltada y filas de las tablas */
+tbody td,thead th{transition:background .14s ease}
+tbody tr{transition:transform .12s ease}
+
+/* ventana flotante: entra en vez de aparecer de golpe */
+@keyframes abreVentana{from{opacity:0;transform:translateY(10px) scale(.985)}
+                       to{opacity:1;transform:none}}
+.flot:not([hidden]){animation:abreVentana .22s cubic-bezier(.22,.7,.3,1)}
+
+/* globo y cruz del grafico */
+.tip{transition:opacity .12s ease}
+#cruz{transition:opacity .12s ease}
+#marcas-foco circle{animation:subeNumero .2s ease both}
+.marca-dec circle{transition:r .14s ease}
+.marca-dec:hover circle:last-of-type{r:7}
+
+@media (prefers-reduced-motion: reduce){
+  .entra{animation:none}
+  .ficha .hoy,.ficha .delta,#marcas-foco circle{animation:none}
+  .flot:not([hidden]){animation:none}
+  .seg button:hover,.ly:hover,.ov:hover,.acc:hover,.abrir-ind:hover,.mini:hover{transform:none}
+}
 body{margin:0;background:var(--bg);color:var(--ink);
   font-family:"Segoe UI Variable Text","Segoe UI",-apple-system,Inter,system-ui,sans-serif;
   font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 
 /* ---------- banda superior ---------- */
-.tope{background:var(--jd);border-bottom:4px solid var(--amarillo)}
+.tope{background:linear-gradient(100deg,var(--jd-osc) 0%,var(--jd) 40%,var(--jd) 66%,var(--jd-osc) 100%);
+  border-bottom:4px solid var(--amarillo);position:relative;overflow:hidden}
+.tope::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.10) 46%,transparent 62%)}
+.tope-in{position:relative;z-index:1}
 .tope-in{max-width:1200px;margin:0 auto;padding:20px 24px 18px;
   display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between}
 .tope h1{margin:0;color:#fff;font-size:1.3rem;font-weight:650;letter-spacing:-.02em}
@@ -128,6 +193,8 @@ tbody td{border-bottom:1px solid var(--line)}
 tbody tr:last-child td{border-bottom:0}
 tbody tr:hover td,tbody tr:hover td.cat{background:var(--sup-2)}
 td.marca,th.marca{background:var(--hl)!important}
+td.col-hover,th.col-hover{background:var(--jd-cl)}
+td.marca.col-hover,th.marca.col-hover{background:var(--amarillo)!important}
 .sep-l{border-left:1px solid var(--line-2)}
 .ind td,.ind td.cat{font-weight:700;background:var(--sup-2)}
 .tit-tabla{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;
@@ -395,6 +462,29 @@ function pintarTablas(){
   document.getElementById("tablas").innerHTML =
     '<div class="tit-tabla">'+SEG_ES[S.seg]+' · FYTD</div>'+tablaCruda(mes,S.seg,"FYTD")
    +'<div class="tit-tabla">'+SEG_ES[S.seg]+' · LFYTD</div>'+tablaCruda(mes,S.seg,"LFYTD");
+  // Resalta la columna que esta bajo el mouse en las dos tablas a la vez.
+  // Es solo visual: el resaltado fijo sigue siendo el del click.
+  const tablas = document.querySelectorAll("#tablas table");
+  tablas.forEach(function(tb){
+    tb.addEventListener("mouseover", function(ev){
+      const celda = ev.target.closest("td,th");
+      if(!celda || !celda.parentElement) return;
+      const i = Array.prototype.indexOf.call(celda.parentElement.children, celda);
+      if(i<=0){ pintarColumna(null); return; }
+      pintarColumna(i);
+    });
+    tb.addEventListener("mouseleave", function(){ pintarColumna(null); });
+  });
+  function pintarColumna(i){
+    tablas.forEach(function(tb){
+      tb.querySelectorAll("tr").forEach(function(tr){
+        Array.prototype.forEach.call(tr.children, function(c,k){
+          c.classList.toggle("col-hover", i!==null && k===i);
+        });
+      });
+    });
+  }
+
   document.querySelectorAll("#tablas th[data-col]").forEach(function(th){
     th.onclick = function(){
       S.col = (S.col===th.dataset.col) ? null : th.dataset.col; pintarTablas(); };
@@ -1165,6 +1255,24 @@ function render(){
     +(mes.fuente?' · '+esc(mes.fuente):"")
     +' · '+Object.keys(APP.meses).length+' informes cargados · generado '+esc(APP.generado);
 }
+/* Aparicion escalonada de los bloques al entrar en pantalla. Si el navegador
+   no soporta IntersectionObserver, quedan visibles y listo. */
+function armarRevelado(){
+  if(!("IntersectionObserver" in window)) return;   // sin efecto, pero se ve todo
+  const obs = new IntersectionObserver(function(entradas){
+    entradas.forEach(function(e){
+      if(!e.isIntersecting) return;
+      e.target.style.animationDelay = "0ms";
+      e.target.classList.add("entra");
+      obs.unobserve(e.target);
+    });
+  }, {rootMargin:"0px 0px -8% 0px", threshold:0.04});
+  document.querySelectorAll(".fichas, section").forEach(function(b,i){
+    b.style.animationDelay = (i*70)+"ms";
+    obs.observe(b);
+  });
+}
+
 function init(){
   if(!APP || !APP.meses || !Object.keys(APP.meses).length){
     document.body.innerHTML="<p style='padding:24px'>No hay datos. Ejecutá <code>python procesar_tbm.py</code>.</p>";
@@ -1199,6 +1307,7 @@ function init(){
   armarFlot();
   render();
   dibujar();
+  armarRevelado();
   if(window.matchMedia)
     window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", dibujar);
 }

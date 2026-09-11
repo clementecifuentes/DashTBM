@@ -69,6 +69,19 @@ Una sola página:
    mismo rango de meses que el gráfico de ventas y se actualiza cuando lo
    cambiás, pero cada indicador conserva su propia escala.
 
+### Efectos visuales
+
+La página tiene una capa cosmética: aparición escalonada de los bloques al
+entrar en pantalla, números de la ficha que entran al recalcularse, resaltado
+de la columna bajo el mouse en las dos tablas a la vez, degradado en la banda
+superior, y micro-elevación de botones y tarjetas.
+
+Regla que se respetó al escribirlos: **ningún efecto puede esconder contenido**.
+La animación de entrada va de transparente a visible *sin* `fill-mode`, así el
+estado de reposo del elemento es visible: si la animación no llega a correr —
+pestaña en segundo plano, navegador que no dispara `IntersectionObserver` — no
+hay efecto, pero se ve todo igual. Todo se apaga con `prefers-reduced-motion`.
+
 ### Cómo se distingue cada línea
 
 Con 14 tonos de un mismo color los vecinos se parecen, así que hay tres ayudas:
