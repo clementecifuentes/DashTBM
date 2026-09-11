@@ -402,8 +402,8 @@ const SEG_ES = {tractores:"Tractores", cosechadoras:"Cosechadoras"};
    cada segmento usa una rampa de un solo tono, de claro (chica) a oscuro (grande),
    en vez de 18 colores distintos que nadie puede distinguir. */
 const RAMPAS = {
-  tractores:   {claro:"#b8d8ff", oscuro:"#06214a", dark:["#e2efff","#2f6fc4"]},
-  cosechadoras:{claro:"#fbd3b0", oscuro:"#5c1f06", dark:["#fde8d8","#c96a2e"]},
+  tractores:   {claro:"#7db0ef", oscuro:"#08294f", dark:["#d5e6fb","#3d7fcc"]},
+  cosechadoras:{claro:"#eda875", oscuro:"#5c1f06", dark:["#fadcc4","#cf7434"]},
 };
 const oscuro = () => window.matchMedia &&
   window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -581,7 +581,7 @@ function dibujar(){
                     label:c.label, color:colorDe(sg,idx,cats.length),
                     // el grosor tambien crece con la potencia: dos pistas
                     // ordenadas separan mejor los tonos vecinos que una sola
-                    grosor: (1.3 + 1.3*(cats.length>1 ? idx/(cats.length-1) : 1)).toFixed(2),
+                    grosor: (1.6 + 1.0*(cats.length>1 ? idx/(cats.length-1) : 1)).toFixed(2),
                     punteada: med==="dealer" && meds.length>1,
                     off:off, pts:pts});
       });
@@ -860,17 +860,28 @@ function pintarLeyenda(){
   });
   html += '<span class="acciones"><button class="acc" data-todo="on">Mostrar todas</button>'
         + '<button class="acc" data-todo="off">Ocultar todas</button></span>';
-  document.getElementById("leyenda").innerHTML = html;
+  const cajaLy = document.getElementById("leyenda");
+  cajaLy.innerHTML = html;
+  // Con 14 tonos del mismo color la leyenda sola no alcanza: pasar el mouse por
+  // una etiqueta aisla su linea. Va por delegacion porque los botones se
+  // recrean en cada dibujo y un handler propio se pierde o no llega a disparar.
+  if(!cajaLy.dataset.foco){
+    cajaLy.dataset.foco = "1";
+    cajaLy.addEventListener("mouseover", function(ev){
+      const b = ev.target.closest ? ev.target.closest("[data-k]") : null;
+      if(!FOCO) return;
+      if(!b){ FOCO(null); return; }
+      const id = b.dataset.seg+"|"+b.dataset.k;
+      FOCO(S.apagadas[id] ? null : id);
+    });
+    cajaLy.addEventListener("mouseleave", function(){ if(FOCO) FOCO(null); });
+  }
   document.querySelectorAll("#leyenda [data-k]").forEach(function(b){
     const id = b.dataset.seg+"|"+b.dataset.k;
     b.onclick = function(){
       if(S.apagadas[id]) delete S.apagadas[id]; else S.apagadas[id]=true;
       dibujar();
     };
-    // Con 14 tonos del mismo color la leyenda sola no alcanza: pasar el mouse
-    // por la etiqueta aisla su linea en el grafico.
-    b.onmouseenter = function(){ if(FOCO && !S.apagadas[id]) FOCO(id); };
-    b.onmouseleave = function(){ if(FOCO) FOCO(null); };
   });
   document.querySelectorAll("#leyenda [data-todo]").forEach(function(b){
     b.onclick = function(){
