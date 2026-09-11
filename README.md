@@ -22,15 +22,17 @@ El paso 3 lee todos los PDF de `datos/`, acumula cada mes en
 
 Una sola página:
 
-0. **Dos fichas arriba de todo**, una por segmento. Cada una compara el año
-   fiscal en curso contra el anterior, en **AOR y en País**, para tres filas:
-   industria, Cetomaq y market share. Salen directo de las tablas FYTD y LFYTD
-   del informe elegido, así que cambian con el selector de arriba.
+0. **Una ficha arriba de todo**, del segmento que esté elegido en el
+   interruptor Tractores / Cosechadoras, el mismo que manda en las tablas.
+   Compara el año fiscal en curso contra el anterior, en **AOR y en País**,
+   para tres filas: industria, Cetomaq y market share. Sale directo de las
+   tablas FYTD y LFYTD del informe elegido, así que cambia con el selector de
+   informe y con el de segmento.
 
 1. **Tablas del informe** — FYTD y LFYTD tal cual salen del PDF, sin nada
-   calculado encima. Selector de segmento arriba. Click en el encabezado de una
-   columna para resaltarla en las dos tablas a la vez (la función sigue estando,
-   la leyenda que la explicaba se sacó de la página).
+   calculado encima. El interruptor de segmento manda también en la ficha de
+   arriba. Click en el encabezado de una columna para resaltarla en las dos
+   tablas a la vez.
 2. **Evolución mensual por tipo de máquina** — una línea por cada tipo de las
    tablas (14 bandas de potencia, 4 clases de cosechadora), todas en el mismo
    gráfico. **Segmento y medida aceptan las dos opciones a la vez**: se pueden

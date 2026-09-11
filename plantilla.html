@@ -77,8 +77,7 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--jd);outline-of
 
 /* ---------- tablas ---------- */
 /* ---------- fichas de cabecera ---------- */
-.fichas{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
-  gap:14px;margin:26px 0 4px}
+.fichas{max-width:780px;margin:26px 0 4px}
 .ficha{background:var(--sup);border:1px solid var(--line);border-radius:8px;
   box-shadow:var(--sombra);border-top:3px solid var(--jd);overflow:hidden}
 .ficha.cos{border-top-color:#c96a2e}
@@ -285,11 +284,6 @@ footer{margin-top:52px;padding-top:15px;border-top:1px solid var(--line);
 
   <section>
     <div class="rotulo"><i></i><b>Evolución mensual por tipo de máquina</b></div>
-    <p class="lead">Cada línea es un tipo de máquina de las tablas de arriba, y muestra
-      cuántas unidades se vendieron en ese mes — no el acumulado. El color va de claro
-      a oscuro según la potencia: cuanto más oscura la línea, más grande la máquina.
-      Pasá el mouse por el gráfico para aislar una línea, y usá la leyenda de abajo
-      para apagar las que no te interesen.</p>
     <div class="barra" id="ctrl"></div>
     <div class="ov-chips" id="ov-chips" style="margin:-4px 0 12px">
       <span class="et">Proyectar sobre el gráfico</span>
@@ -777,7 +771,9 @@ function pintarFichas(){
       + '</div>';
   };
 
-  const fichas = ["tractores","cosechadoras"].filter(function(seg){
+  // Una sola ficha: la del segmento elegido arriba, el mismo interruptor que
+  // manda en las tablas.
+  const fichas = [S.seg].filter(function(seg){
     return tabInf(mes,seg,"FYTD") && tabInf(mes,seg,"LFYTD"); }).map(function(seg){
     const tf = tabInf(mes,seg,"FYTD"), tl = tabInf(mes,seg,"LFYTD");
     const ambito = function(col, et){
@@ -1072,7 +1068,7 @@ function init(){
     b.onclick=function(){ S.seg=b.dataset.seg; S.col=null;
       document.querySelectorAll("#segmento button").forEach(function(o){
         o.setAttribute("aria-pressed", String(o===b)); });
-      pintarTablas(); }; });
+      pintarFichas(); pintarTablas(); }; });
 
   if(APP.avisos && APP.avisos.length)
     document.getElementById("avisos").innerHTML=
