@@ -102,9 +102,6 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--jd);outline-of
 .linea .antes{font-size:.68rem;color:var(--ink-3);font-variant-numeric:tabular-nums}
 .linea .delta{font-size:.72rem;font-weight:650;text-align:right;
   font-variant-numeric:tabular-nums}
-.ficha-pie{font-size:.7rem;color:var(--ink-3);padding:8px 16px 10px;
-  border-top:1px dashed var(--line-2);line-height:1.45}
-.ficha-pie b{color:var(--ink-2)}
 @media (max-width:460px){.ficha-cuerpo{grid-template-columns:1fr}
   .ambito+.ambito{border-left:0;border-top:1px solid var(--line)}}
 
@@ -277,8 +274,6 @@ footer{margin-top:52px;padding-top:15px;border-top:1px solid var(--line);
 
   <section>
     <div class="rotulo"><i></i><b>Tablas del informe</b></div>
-    <p class="lead">Tal cual salen del PDF. Click en el encabezado de una columna
-      para resaltarla en las dos tablas.</p>
     <div class="barra">
       <div class="seg" id="segmento">
         <button type="button" data-seg="tractores" aria-pressed="true">Tractores</button>
@@ -792,22 +787,10 @@ function pintarFichas(){
         + linea("Market share", valInf(tf,"share",col),  valInf(tl,"share",col),     true)
         + '</div>';
     };
-    // El AOR del anio anterior se recalcula hacia arriba con los meses, asi que
-    // el LFYTD exagera la caida. Se agrega el cotejo contra el dato publicado
-    // en su momento, que es el unico comparable de verdad.
-    const prev = APP.meses[(parseInt(mes.clave.slice(0,4),10)-1)+"-"+mes.clave.slice(5)];
-    const tp = prev ? tabInf(prev,seg,"FYTD") : null;
-    const vRep = varPc(valInf(tf,"industria","AOR"), valInf(tl,"industria","AOR"));
-    const vCmp = varPc(valInf(tf,"industria","AOR"), valInf(tp,"industria","AOR"));
-    const pie = (vCmp!=null && vRep!=null && Math.abs(vCmp-vRep)>=3)
-      ? '<div class="ficha-pie">Industria AOR contra el dato de '+esc(fyAnt)
-        + ' publicado en su momento ('+uni(valInf(tp,"industria","AOR"))+' u.): '
-        + '<b class="'+cls(vCmp)+'">'+txtVar(vCmp)+'</b></div>'
-      : "";
     return '<div class="ficha '+(seg==="cosechadoras"?"cos":"")+'">'
       + '<div class="ficha-cab"><b>'+SEG_ES[seg]+'</b><span>'+esc(fyAct)+' vs '+esc(fyAnt)+'</span></div>'
       + '<div class="ficha-cuerpo">'+ambito("AOR","AOR")+ambito("PAIS","País")+'</div>'
-      + pie + '</div>';
+      + '</div>';
   }).join("");
 
   cont.innerHTML = fichas;

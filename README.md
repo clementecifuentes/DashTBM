@@ -25,13 +25,12 @@ Una sola página:
 0. **Dos fichas arriba de todo**, una por segmento. Cada una compara el año
    fiscal en curso contra el anterior, en **AOR y en País**, para tres filas:
    industria, Cetomaq y market share. Salen directo de las tablas FYTD y LFYTD
-   del informe elegido, así que cambian con el selector de arriba. Cuando el
-   AOR informado difiere mucho del comparable, la ficha agrega al pie la
-   variación contra el dato del año anterior tal como se publicó entonces.
+   del informe elegido, así que cambian con el selector de arriba.
 
 1. **Tablas del informe** — FYTD y LFYTD tal cual salen del PDF, sin nada
-   calculado encima. Selector de segmento arriba; click en el encabezado de una
-   columna para resaltarla en las dos tablas a la vez.
+   calculado encima. Selector de segmento arriba. Click en el encabezado de una
+   columna para resaltarla en las dos tablas a la vez (la función sigue estando,
+   la leyenda que la explicaba se sacó de la página).
 2. **Evolución mensual por tipo de máquina** — una línea por cada tipo de las
    tablas (14 bandas de potencia, 4 clases de cosechadora), todas en el mismo
    gráfico. **Segmento y medida aceptan las dos opciones a la vez**: se pueden
@@ -102,9 +101,10 @@ Comparando cada LFYTD contra el FYTD del mismo mes publicado un año antes:
 
 Las unidades propias del dealer y los totales nacionales quedan firmes; lo que
 se recalcula hacia arriba con los meses es la **asignación de unidades al AOR**.
-Por eso el dashboard muestra, junto a la variación que informa el reporte, la
-comparación contra el dato del año anterior **tal como estaba publicado en su
-momento**: en jul-2026 los tractores del AOR pasan de −18,2% a −2,9%.
+La página muestra la variación tal como la informa el reporte. Tener presente
+al leerla que en jul-2026 los tractores del AOR caen −18,2% contra el LFYTD
+recalculado, pero solo −2,9% contra el dato de FY25 publicado en su momento:
+buena parte de esa caída es reasignación de unidades al AOR, no mercado.
 
 ## Indicadores de contexto
 
