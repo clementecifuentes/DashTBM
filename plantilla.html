@@ -386,6 +386,7 @@ footer{margin-top:52px;padding-top:15px;border-top:1px solid var(--line);
     <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap">
       <button class="abrir-ind" type="button" id="abrir-ind"><i></i>Tasas e indicadores</button>
       <button class="btn-foto" type="button" id="btn-foto">Fijar esta vista para comparar</button>
+      <button class="ov" type="button" id="btn-escala" aria-pressed="true" hidden><i></i>Misma escala</button>
     </div>
   </section>
 
@@ -449,6 +450,7 @@ const S = {
   indicador:"retenciones",
   ov:{decretos:true, retenciones:true, tc:false},
   foto:null,          // vista congelada para comparar
+  escalaComun:true,   // eje vertical compartido entre la foto y el grafico vivo
 };
 
 /* ==================== tablas en crudo ==================== */
@@ -610,7 +612,8 @@ function pintarGrafico(cont, cfg, escala, esFoto){
        nVis + " de " + nTipos + " tipos de máquina" +
        (meds.length>1 ? " · línea llena es industria, punteada es Cetomaq" : "") +
        (cfg.ov.retenciones && hayEventos() ? " · la cinta amarilla es la retención a la soja" : "") +
-       (cfg.ov.tc ? " · la tira de abajo es el dólar oficial" : ""))
+       (cfg.ov.tc ? " · la tira de abajo es el dólar oficial" : "") +
+       (S.foto && !S.escalaComun ? " · escala propia, no comparable con el otro gráfico" : ""))
     : "";
   const cabecera = '<div class="chart-tit'+(esFoto?" foto":"")+'">'+esc(titulo)+'</div>'
     + '<div class="chart-sub">'+esc(bajada)+'</div>';
@@ -927,7 +930,10 @@ function dibujar(){
     zona.innerHTML = '<div class="graf"></div>';
     pintarGrafico(zona.querySelector(".graf"), vivo, null, false);
   }else{
-    const esc = escalaComun([S.foto, vivo]);
+    // Con escala compartida la foto puede reacomodarse si el periodo nuevo
+    // llega mas alto; sin ella la foto queda intacta pero las alturas de los
+    // dos graficos dejan de ser comparables. Lo elige el usuario.
+    const esc = S.escalaComun ? escalaComun([S.foto, vivo]) : null;
     zona.className = "chart-hold comparando";
     zona.innerHTML = '<div class="graf"></div><div class="graf"></div>';
     const cajas = zona.querySelectorAll(".graf");
@@ -936,6 +942,14 @@ function dibujar(){
   }
   const b = document.getElementById("btn-foto");
   if(b) b.textContent = S.foto ? "Quitar comparación" : "Fijar esta vista para comparar";
+  const be = document.getElementById("btn-escala");
+  if(be){
+    be.hidden = !S.foto;
+    be.setAttribute("aria-pressed", String(S.escalaComun));
+    be.title = S.escalaComun
+      ? "Los dos gráficos comparten el eje vertical, así las alturas se pueden comparar"
+      : "Cada gráfico usa su propia escala: la vista fijada queda intacta, pero las alturas no son comparables";
+  }
   pintarLeyenda();
   dibujarFlot();
 }
@@ -1331,6 +1345,8 @@ function armarControles(){
   }
   alterna("#segG button", S.segs, "s");
   alterna("#medida button", S.medidas, "m");
+  const be = document.getElementById("btn-escala");
+  if(be) be.onclick = function(){ S.escalaComun = !S.escalaComun; dibujar(); };
   const bf = document.getElementById("btn-foto");
   if(bf) bf.onclick = function(){
     // Congela la vista actual tal cual: rango, segmentos, medidas, tipos

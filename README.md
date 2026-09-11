@@ -94,11 +94,19 @@ El botón **Fijar esta vista para comparar** congela el gráfico tal como está
 arriba. Después se cambia el rango y el gráfico vivo queda abajo, con los dos
 a la vista.
 
-Los dos comparten **escala vertical**, calculada sobre el máximo de ambos. Si
-cada uno usara la suya, dos períodos con volúmenes distintos se verían iguales
-y la comparación visual mentiría. Cada gráfico conserva su propia cinta de
-retenciones y sus marcas de decreto, que es justamente lo que cambia entre un
-período y otro.
+Por defecto los dos comparten **escala vertical**, calculada sobre el máximo de
+ambos: si cada uno usara la suya, dos períodos con volúmenes distintos se verían
+iguales y la comparación visual mentiría.
+
+El costo de eso es que la vista fijada **puede reacomodarse**: si el período
+nuevo llega más alto, el eje crece y las líneas de la foto se achatan. Sus datos
+no cambian, pero deja de verse igual. Por eso hay un interruptor **Misma
+escala**, que aparece solo al comparar: apagándolo cada gráfico usa su propia
+escala y la foto queda intacta, a cambio de que las alturas dejen de ser
+comparables — la bajada lo avisa cuando eso pasa.
+
+Cada gráfico conserva su propia cinta de retenciones y sus marcas de decreto,
+que es justamente lo que cambia entre un período y otro.
 
 ### Cómo se distingue cada línea
 
