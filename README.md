@@ -87,6 +87,19 @@ estado de reposo del elemento es visible: si la animación no llega a correr —
 pestaña en segundo plano, navegador que no dispara `IntersectionObserver` — no
 hay efecto, pero se ve todo igual. Todo se apaga con `prefers-reduced-motion`.
 
+### Comparar dos períodos
+
+El botón **Fijar esta vista para comparar** congela el gráfico tal como está
+—rango, segmento, medidas, tipos apagados y capas proyectadas— y lo deja
+arriba. Después se cambia el rango y el gráfico vivo queda abajo, con los dos
+a la vista.
+
+Los dos comparten **escala vertical**, calculada sobre el máximo de ambos. Si
+cada uno usara la suya, dos períodos con volúmenes distintos se verían iguales
+y la comparación visual mentiría. Cada gráfico conserva su propia cinta de
+retenciones y sus marcas de decreto, que es justamente lo que cambia entre un
+período y otro.
+
 ### Cómo se distingue cada línea
 
 Con 14 tonos de un mismo color los vecinos se parecen, así que hay tres ayudas:

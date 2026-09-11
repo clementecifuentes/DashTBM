@@ -208,6 +208,16 @@ td.marca.col-hover,th.marca.col-hover{background:var(--amarillo)!important}
 .chart-tit{font-size:.86rem;font-weight:650;margin-bottom:2px}
 .chart-sub{font-size:.75rem;color:var(--ink-3);margin-bottom:8px}
 .chart-hold{position:relative}
+.chart-hold.comparando{display:grid;gap:6px}
+.chart-hold.comparando .graf{position:relative;padding-top:10px}
+.chart-hold.comparando .graf+.graf{border-top:1px dashed var(--line-2)}
+.graf{position:relative}
+.chart-tit.foto{color:var(--jd)}
+.chart-tit.foto::before{content:"◉ ";font-size:.8em}
+.btn-foto{font:inherit;font-size:.79rem;font-weight:600;border:1px solid var(--line-2);
+  background:var(--sup);color:var(--ink-2);padding:6px 14px;border-radius:6px;cursor:pointer;
+  transition:background .16s ease,border-color .16s ease,color .16s ease,transform .12s ease}
+.btn-foto:hover{border-color:var(--jd);color:var(--jd);transform:translateY(-1px)}
 svg.chart{display:block;width:100%;height:auto;overflow:visible}
 .serie{transition:opacity .14s ease, stroke-width .14s ease}
 polyline.serie{stroke-dasharray:1;stroke-dashoffset:1;
@@ -370,13 +380,12 @@ footer{margin-top:52px;padding-top:15px;border-top:1px solid var(--line);
       <button class="ov" type="button" data-ov="tc" aria-pressed="false"><i></i>Dólar oficial</button>
     </div>
     <div class="panel">
-      <div class="chart-tit" id="chart-tit"></div>
-      <div class="chart-sub" id="chart-sub"></div>
       <div class="chart-hold" id="chart-hold"></div>
       <div class="leyenda" id="leyenda"></div>
     </div>
-    <div style="margin-top:12px">
+    <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap">
       <button class="abrir-ind" type="button" id="abrir-ind"><i></i>Tasas e indicadores</button>
+      <button class="btn-foto" type="button" id="btn-foto">Fijar esta vista para comparar</button>
     </div>
   </section>
 
@@ -439,6 +448,7 @@ const S = {
   foco:null,
   indicador:"retenciones",
   ov:{decretos:true, retenciones:true, tc:false},
+  foto:null,          // vista congelada para comparar
 };
 
 /* ==================== tablas en crudo ==================== */
@@ -522,6 +532,60 @@ const MED_ES = {industria:"Industria", dealer:"Cetomaq"};
 let FOCO = null;   // lo setea dibujar(); lo usa la leyenda al pasar el mouse
 const apagada = (seg,key)=> !!S.apagadas[seg+"|"+key];
 
+/* Una "configuracion" es todo lo que define un grafico: que rango, que
+   segmentos, que medidas, que tipos apagados y que capas proyectadas. El
+   grafico vivo arma la suya del estado; la foto guarda una copia. */
+function cfgActual(){
+  return {desde:S.desde, hasta:S.hasta,
+          segs:Object.assign({}, S.segs), medidas:Object.assign({}, S.medidas),
+          apagadas:Object.assign({}, S.apagadas), ov:Object.assign({}, S.ov)};
+}
+function ejeDe(cfg){
+  return ejeCompleto().filter(function(p){
+    return p.clave>=cfg.desde && p.clave<=cfg.hasta; });
+}
+function segsDe(cfg){
+  return ["tractores","cosechadoras"].filter(function(x){
+    return cfg.segs[x] && puntos(x).length; });
+}
+function medsDe(cfg){
+  return ["industria","dealer"].filter(function(m){ return cfg.medidas[m]; });
+}
+function apagadaEn(cfg, seg, key){ return !!cfg.apagadas[seg+"|"+key]; }
+
+/* Extremos de una configuracion, sin dibujarla: hacen falta antes de pintar
+   para poder darle la misma escala a las dos. */
+function extremos(cfg){
+  let mx=0, mn=0;
+  const E = ejeDe(cfg);
+  segsDe(cfg).forEach(function(sg){
+    tipos(sg).forEach(function(c){
+      if(apagadaEn(cfg,sg,c.key)) return;
+      medsDe(cfg).forEach(function(med){
+        E.forEach(function(e){
+          const v = valorDe(sg,c.key,e.clave,med);
+          if(v==null) return;
+          if(v>mx) mx=v;
+          if(v<mn) mn=v;
+        });
+      });
+    });
+  });
+  return {max:mx, min:mn};
+}
+function escalaComun(cfgs){
+  let mx=0, mn=0;
+  cfgs.forEach(function(c){
+    const e = extremos(c);
+    if(e.max>mx) mx=e.max;
+    if(e.min<mn) mn=e.min;
+  });
+  const paso = pasoLindo(Math.max(4,mx*1.12)/5);
+  return {paso:paso,
+          topN: paso*Math.max(1,Math.ceil(Math.max(4,mx*1.02)/paso)),
+          botN: mn<0 ? -paso*Math.ceil(Math.abs(mn*1.15)/paso) : 0};
+}
+
 function pasoLindo(bruto){
   const e = Math.pow(10, Math.floor(Math.log10(Math.max(bruto,1e-6))));
   const n = bruto/e;
@@ -531,34 +595,37 @@ function pasoLindo(bruto){
 /* ==================== grafico ==================== */
 function hayEventos(){ return !!(IND && IND.eventos && IND.eventos.length); }
 
-function dibujar(){
-  const E = eje(), cont = document.getElementById("chart-hold");
-  const segs = segsActivos(), meds = medidasActivas();
+function pintarGrafico(cont, cfg, escala, esFoto){
+  const E = ejeDe(cfg);
+  const segs = segsDe(cfg), meds = medsDe(cfg);
   const nTipos = segs.reduce(function(n,sg){ return n + tipos(sg).length; }, 0);
   const nVis = segs.reduce(function(n,sg){
-    return n + tipos(sg).filter(function(c){ return !apagada(sg,c.key); }).length; }, 0);
+    return n + tipos(sg).filter(function(c){ return !apagadaEn(cfg,sg,c.key); }).length; }, 0);
 
-  document.getElementById("chart-tit").textContent =
-    "Unidades vendidas por mes · " + segs.map(function(x){ return SEG_ES[x]; }).join(" y ")
+  const titulo = (esFoto ? "Vista fijada · " : "")
+    + "Unidades vendidas por mes · " + segs.map(function(x){ return SEG_ES[x]; }).join(" y ")
     + " · " + meds.map(function(m){ return MED_ES[m]; }).join(" y ");
-  document.getElementById("chart-sub").textContent =
-    E.length ? (E[0].mes + " a " + E[E.length-1].mes + " · unidades por mes · " +
-      nVis + " de " + nTipos + " tipos de máquina" +
-      (meds.length>1 ? " · línea llena es industria, punteada es Cetomaq" : "") +
-      (S.ov.retenciones && hayEventos() ? " · la cinta amarilla es la retención a la soja" : "") +
-      (S.ov.tc ? " · la tira de abajo es el dólar oficial" : "")) : "";
+  const bajada = E.length
+    ? (E[0].mes + " a " + E[E.length-1].mes + " · unidades por mes · " +
+       nVis + " de " + nTipos + " tipos de máquina" +
+       (meds.length>1 ? " · línea llena es industria, punteada es Cetomaq" : "") +
+       (cfg.ov.retenciones && hayEventos() ? " · la cinta amarilla es la retención a la soja" : "") +
+       (cfg.ov.tc ? " · la tira de abajo es el dólar oficial" : ""))
+    : "";
+  const cabecera = '<div class="chart-tit'+(esFoto?" foto":"")+'">'+esc(titulo)+'</div>'
+    + '<div class="chart-sub">'+esc(bajada)+'</div>';
 
   if(E.length<2){
-    cont.innerHTML = '<p class="nota">Elegí un rango de al menos dos meses.</p>';
-    pintarLeyenda(); return;
+    cont.innerHTML = cabecera + '<p class="nota">Elegí un rango de al menos dos meses.</p>';
+    return;
   }
 
   const hayEv = IND && IND.eventos && IND.eventos.length;
-  const cinta = (S.ov.retenciones && hayEv) ? 24 : 0;   // alto de la cinta de retenciones
+  const cinta = (cfg.ov.retenciones && hayEv) ? 24 : 0;   // alto de la cinta de retenciones
   const CLAVE_TC = (IND && IND.series && IND.series.oficial) ? "oficial" : "tc";
-  const tira  = S.ov.tc && IND && IND.series && IND.series[CLAVE_TC] ? 48 : 0;
+  const tira  = cfg.ov.tc && IND && IND.series && IND.series[CLAVE_TC] ? 48 : 0;
   const W=1000, mL=58, mR=64, mT=16, mB=30;
-  const H = 300 + cinta + tira;
+  const H = (S.foto ? 240 : 300) + cinta + tira;
   const iw = W-mL-mR;
   const mT2 = mT + cinta;
   const ih = H - mT2 - mB - tira;
@@ -572,7 +639,7 @@ function dibujar(){
   segs.forEach(function(sg){
     const cats = tipos(sg);
     cats.forEach(function(c,idx){
-      const off = apagada(sg,c.key);
+      const off = apagadaEn(cfg,sg,c.key);
       meds.forEach(function(med){
         const pts = E.map(function(e,i){
           const v = valorDe(sg,c.key,e.clave,med);
@@ -590,9 +657,13 @@ function dibujar(){
     });
   });
 
-  const paso = pasoLindo(Math.max(4,maxV*1.12)/5);
-  const topN = paso*Math.max(1,Math.ceil(Math.max(4,maxV*1.02)/paso));
-  const botN = minV<0 ? -paso*Math.ceil(Math.abs(minV*1.15)/paso) : 0;
+  // Si viene una escala comun, se respeta: dos periodos con escalas distintas
+  // se verian iguales y la comparacion visual mentiria.
+  const paso = escala ? escala.paso : pasoLindo(Math.max(4,maxV*1.12)/5);
+  const topN = escala ? escala.topN
+                      : paso*Math.max(1,Math.ceil(Math.max(4,maxV*1.02)/paso));
+  const botN = escala ? escala.botN
+                      : (minV<0 ? -paso*Math.ceil(Math.abs(minV*1.15)/paso) : 0);
   const y = v => mT2+ih-((v-botN)/(topN-botN))*ih;
 
   let grid="", etY="";
@@ -679,7 +750,7 @@ function dibujar(){
 
   // ---- lineas verticales de cada decreto ----
   let decSVG = "";
-  if(S.ov.decretos && hayEv){
+  if(cfg.ov.decretos && hayEv){
     (IND.eventos||[]).forEach(function(ev){
       const i = E.findIndex(function(p){ return p.clave===ev.mes; });
       if(i<0) return;
@@ -722,31 +793,31 @@ function dibujar(){
     }
   }
 
-  cont.innerHTML =
+  cont.innerHTML = cabecera +
     '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Unidades por mes y tipo de máquina">'
     + bandas + grid + fy + cintaSVG + tcSVG
     + '<line x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(0)+'" y2="'+y(0)+'" stroke="var(--line-2)"/>'
     + etY + etX
-    + '<path id="area-foco" d="" fill="none" opacity="0"/>'
-    + lineas + '<g id="marcas-foco"></g>'
+    + '<path class="area-foco" d="" fill="none" opacity="0"/>'
+    + lineas + '<g class="marcas-foco"></g>'
     // apagar todas las categorias dejaba una grilla muda: que lo diga
     + (datos.some(function(z){ return !z.off; }) ? "" :
         '<text x="'+(W/2)+'" y="'+(mT2+ih/2-6)+'" text-anchor="middle" fill="var(--ink-2)" '
         + 'font-size="13" font-weight="600">No hay ningún tipo de máquina visible</text>'
         + '<text x="'+(W/2)+'" y="'+(mT2+ih/2+14)+'" text-anchor="middle" fill="var(--ink-3)" '
         + 'font-size="11.5">Usá «Mostrar todas» en la leyenda de abajo</text>') 
-    + '<line id="cruz" x1="0" x2="0" y1="'+mT2+'" y2="'+(mT2+ih)+'" stroke="var(--ink-3)" stroke-dasharray="3 3" opacity="0"/>'
-    + '<rect x="'+mL+'" y="'+mT2+'" width="'+iw+'" height="'+ih+'" fill="transparent" id="cap"/>'
+    + '<line class="cruz" x1="0" x2="0" y1="'+mT2+'" y2="'+(mT2+ih)+'" stroke="var(--ink-3)" stroke-dasharray="3 3" opacity="0"/>'
+    + '<rect x="'+mL+'" y="'+mT2+'" width="'+iw+'" height="'+ih+'" fill="transparent" class="cap"/>'
     // Las marcas de decreto van al final, encima del rectangulo que captura el
     // mouse: si van antes, el rectangulo se come el hover y no se abren nunca.
     + decSVG
     + '</svg><div class="tip" id="tip"></div>';
 
-  const svg=cont.querySelector("svg"), tip=cont.querySelector("#tip"), cruz=cont.querySelector("#cruz");
+  const svg=cont.querySelector("svg"), tip=cont.querySelector(".tip"), cruz=cont.querySelector(".cruz");
   const vivos = datos.filter(function(d){ return !d.off; });
 
-  const area = cont.querySelector("#area-foco");
-  const marcas = cont.querySelector("#marcas-foco");
+  const area = cont.querySelector(".area-foco");
+  const marcas = cont.querySelector(".marcas-foco");
 
   // k puede ser el id completo (seg|tipo|medida) o el prefijo seg|tipo, que es
   // lo unico que sabe la leyenda: en ese caso resalta las dos medidas.
@@ -781,7 +852,7 @@ function dibujar(){
         +d.color+'" stroke-width="2"/>'; }).join("");
   }
 
-  cont.querySelector("#cap").addEventListener("mousemove", function(ev){
+  cont.querySelector(".cap").addEventListener("mousemove", function(ev){
     const r=svg.getBoundingClientRect();
     const px=(ev.clientX-r.left)/r.width*W, py=(ev.clientY-r.top)/r.height*H;
     if(!r.width) return;   // contenedor oculto: la cuenta daria NaN
@@ -823,9 +894,9 @@ function dibujar(){
     tip.style.left = Math.min(Math.max(x(i)/W*r.width+14,0), r.width-tip.offsetWidth-4)+"px";
     tip.style.top = "4px";
   });
-  cont.querySelector("#cap").addEventListener("mouseleave", function(){
+  cont.querySelector(".cap").addEventListener("mouseleave", function(){
     tip.style.opacity="0"; cruz.setAttribute("opacity","0"); pintarFoco(null); });
-  FOCO = pintarFoco;
+  if(!esFoto) FOCO = pintarFoco;
 
   // globo de los decretos
   cont.querySelectorAll(".marca-dec").forEach(function(g){
@@ -845,6 +916,26 @@ function dibujar(){
       tip.style.opacity="0"; tip.classList.remove("ancho"); });
   });
 
+}
+
+/* Orquestador: un grafico, o dos con escala compartida si hay una vista fijada. */
+function dibujar(){
+  const zona = document.getElementById("chart-hold");
+  const vivo = cfgActual();
+  if(!S.foto){
+    zona.className = "chart-hold";
+    zona.innerHTML = '<div class="graf"></div>';
+    pintarGrafico(zona.querySelector(".graf"), vivo, null, false);
+  }else{
+    const esc = escalaComun([S.foto, vivo]);
+    zona.className = "chart-hold comparando";
+    zona.innerHTML = '<div class="graf"></div><div class="graf"></div>';
+    const cajas = zona.querySelectorAll(".graf");
+    pintarGrafico(cajas[0], S.foto, esc, true);
+    pintarGrafico(cajas[1], vivo, esc, false);
+  }
+  const b = document.getElementById("btn-foto");
+  if(b) b.textContent = S.foto ? "Quitar comparación" : "Fijar esta vista para comparar";
   pintarLeyenda();
   dibujarFlot();
 }
@@ -1240,6 +1331,13 @@ function armarControles(){
   }
   alterna("#segG button", S.segs, "s");
   alterna("#medida button", S.medidas, "m");
+  const bf = document.getElementById("btn-foto");
+  if(bf) bf.onclick = function(){
+    // Congela la vista actual tal cual: rango, segmentos, medidas, tipos
+    // apagados y capas. Despues se cambia el rango y quedan las dos a la vista.
+    S.foto = S.foto ? null : cfgActual();
+    dibujar();
+  };
   document.querySelectorAll("#ov-chips [data-ov]").forEach(function(b){
     b.onclick=function(){
       S.ov[b.dataset.ov] = !S.ov[b.dataset.ov];
