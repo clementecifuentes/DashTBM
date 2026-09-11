@@ -85,8 +85,12 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--jd);outline-of
 .ficha{background:var(--sup);border:1px solid var(--line);border-radius:8px;
   box-shadow:var(--sombra);border-top:3px solid var(--jd);overflow:hidden}
 .ficha.cos{border-top-color:#c96a2e}
-.ficha-cab{display:flex;align-items:baseline;justify-content:space-between;
-  gap:10px;padding:12px 16px 9px;border-bottom:1px solid var(--line)}
+.ficha-cab{display:flex;align-items:center;justify-content:space-between;
+  gap:10px;flex-wrap:wrap;padding:11px 16px 10px;border-bottom:1px solid var(--line)}
+.ficha-cab select{font-size:.76rem;padding:3px 6px;border-radius:5px}
+.ficha-per{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--ink-3)}
+.ficha-vs{font-size:.72rem;font-weight:700;letter-spacing:.03em;color:var(--ink-2);
+  text-transform:none}
 .ficha-cab b{font-size:.92rem;font-weight:650;letter-spacing:-.01em}
 .ficha-cab span{font-size:.7rem;font-weight:700;letter-spacing:.07em;
   text-transform:uppercase;color:var(--ink-3)}
@@ -172,6 +176,9 @@ polyline.serie.punteada{animation-name:trazo,puntear;
 
 .cinta-ret{font-size:9.5px;font-weight:700}
 .marca-dec{cursor:help}
+.tip .ev-tit{font-weight:650;color:var(--ink);margin-bottom:3px}
+.tip .ev-det{color:var(--ink-2);font-size:.73rem;line-height:1.5;white-space:normal}
+.tip.ancho{width:310px;max-width:310px}
 .tira-tc{font-size:9.5px}
 .ov-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .ov-chips .et{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;
@@ -328,8 +335,8 @@ const SEG_ES = {tractores:"Tractores", cosechadoras:"Cosechadoras"};
    cada segmento usa una rampa de un solo tono, de claro (chica) a oscuro (grande),
    en vez de 18 colores distintos que nadie puede distinguir. */
 const RAMPAS = {
-  tractores:   {claro:"#86b6ef", oscuro:"#0d366b", dark:["#cde2fb","#1f5aa8"]},
-  cosechadoras:{claro:"#f4b183", oscuro:"#7a2c0e", dark:["#fbdcc9","#b4531f"]},
+  tractores:   {claro:"#b8d8ff", oscuro:"#06214a", dark:["#e2efff","#2f6fc4"]},
+  cosechadoras:{claro:"#fbd3b0", oscuro:"#5c1f06", dark:["#fde8d8","#c96a2e"]},
 };
 const oscuro = () => window.matchMedia &&
   window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -420,6 +427,7 @@ function medidasActivas(){
   return ["industria","dealer"].filter(function(m){ return S.medidas[m]; });
 }
 const MED_ES = {industria:"Industria", dealer:"Cetomaq"};
+let FOCO = null;   // lo setea dibujar(); lo usa la leyenda al pasar el mouse
 const apagada = (seg,key)=> !!S.apagadas[seg+"|"+key];
 
 function pasoLindo(bruto){
@@ -481,6 +489,9 @@ function dibujar(){
         });
         datos.push({id:sg+"|"+c.key+"|"+med, seg:sg, key:c.key, med:med,
                     label:c.label, color:colorDe(sg,idx,cats.length),
+                    // el grosor tambien crece con la potencia: dos pistas
+                    // ordenadas separan mejor los tonos vecinos que una sola
+                    grosor: (1.3 + 1.3*(cats.length>1 ? idx/(cats.length-1) : 1)).toFixed(2),
                     punteada: med==="dealer" && meds.length>1,
                     off:off, pts:pts});
       });
@@ -536,7 +547,7 @@ function dibujar(){
     return tramos.map(function(t){
       return t.length===1
         ? '<circle class="serie" data-k="'+esc(d.id)+'" cx="'+t[0].split(",")[0]+'" cy="'+t[0].split(",")[1]+'" r="3" fill="'+d.color+'"/>'
-        : '<polyline class="serie'+(d.punteada?" punteada":"")+'" data-k="'+esc(d.id)+'" points="'+t.join(" ")+'" pathLength="1" style="--i:'+orden+'" fill="none" stroke="'+d.color+'" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"/>';
+        : '<polyline class="serie'+(d.punteada?" punteada":"")+'" data-k="'+esc(d.id)+'" data-g="'+d.grosor+'" points="'+t.join(" ")+'" pathLength="1" style="--i:'+orden+'" fill="none" stroke="'+d.color+'" stroke-width="'+d.grosor+'" stroke-linejoin="round" stroke-linecap="round"/>';
     }).join("");
   }).join("");
 
@@ -580,11 +591,15 @@ function dibujar(){
     (IND.eventos||[]).forEach(function(ev){
       const i = E.findIndex(function(p){ return p.clave===ev.mes; });
       if(i<0) return;
-      decSVG += '<g class="marca-dec"><line x1="'+x(i)+'" x2="'+x(i)+'" y1="'+mT2+'" y2="'+(mT2+ih)
+      // El <title> nativo tarda en aparecer y se corta: el globo va por JS,
+      // con el mismo cuadro que usa el resto del grafico.
+      decSVG += '<g class="marca-dec" data-ev="'+i+'" data-tit="'+esc(ev.titulo)+'" '
+        + 'data-det="'+esc(ev.detalle)+'" data-fecha="'+esc(ev.fecha)+'">'
+        + '<line x1="'+x(i)+'" x2="'+x(i)+'" y1="'+mT2+'" y2="'+(mT2+ih)
         + '" stroke="var(--ink-2)" stroke-width="1" stroke-dasharray="2 4" opacity=".55"/>'
+        + '<circle cx="'+x(i)+'" cy="'+(mT2+5)+'" r="7" fill="transparent"/>'
         + '<circle cx="'+x(i)+'" cy="'+(mT2+5)+'" r="5" fill="var(--amarillo)" '
-        + 'stroke="var(--ink-2)" stroke-width="1"/>'
-        + '<title>'+esc(ev.titulo)+" \u2014 "+esc(ev.detalle)+'</title></g>';
+        + 'stroke="var(--ink-2)" stroke-width="1"/></g>';
     });
   }
 
@@ -632,14 +647,18 @@ function dibujar(){
   const area = cont.querySelector("#area-foco");
   const marcas = cont.querySelector("#marcas-foco");
 
+  // k puede ser el id completo (seg|tipo|medida) o el prefijo seg|tipo, que es
+  // lo unico que sabe la leyenda: en ese caso resalta las dos medidas.
   function pintarFoco(k){
+    const calza = function(id){ return id===k || id.indexOf(k+"|")===0; };
     cont.querySelectorAll(".serie").forEach(function(el){
-      const suyo = el.dataset.k===k;
+      const suyo = k!==null && calza(el.dataset.k);
       el.style.opacity = (k===null || suyo) ? "1" : ".16";
-      el.setAttribute("stroke-width", suyo ? "3.2" : "1.9");
+      el.setAttribute("stroke-width", suyo ? "3.4" : (el.dataset.g || "1.9"));
       el.classList.toggle("foco", suyo);
     });
-    const d = k==null ? null : vivos.find(function(s){ return s.key===k; });
+    const hits = k==null ? [] : vivos.filter(function(s){ return calza(s.id); });
+    const d = hits.length===1 ? hits[0] : null;
     if(!d){ area.setAttribute("opacity","0"); marcas.innerHTML=""; return; }
     // relleno bajo la linea en foco, por tramos (puede haber meses sin dato)
     let dd="", act=[];
@@ -664,8 +683,10 @@ function dibujar(){
   cont.querySelector("#cap").addEventListener("mousemove", function(ev){
     const r=svg.getBoundingClientRect();
     const px=(ev.clientX-r.left)/r.width*W, py=(ev.clientY-r.top)/r.height*H;
+    if(!r.width) return;   // contenedor oculto: la cuenta daria NaN
     let i=Math.round((px-mL)/(iw/(E.length-1)));
     i=Math.max(0,Math.min(E.length-1,i));
+    if(!isFinite(i)) return;
     cruz.setAttribute("x1",x(i)); cruz.setAttribute("x2",x(i)); cruz.setAttribute("opacity","1");
 
     let foco=null, dmin=1e9;
@@ -675,7 +696,7 @@ function dibujar(){
       if(dist<dmin){ dmin=dist; foco=d; }
     });
     if(dmin>26) foco=null;
-    pintarFoco(foco?foco.key:null);
+    pintarFoco(foco?foco.id:null);
 
     const orden = vivos.filter(function(d){ return d.pts[i].v!=null; })
       .sort(function(a,b){ return b.pts[i].v-a.pts[i].v; });
@@ -695,6 +716,7 @@ function dibujar(){
     const tot = orden.reduce(function(s,d){ return s+d.pts[i].v; },0);
     filas += '<div class="r" style="margin-top:5px;padding-top:5px;border-top:1px solid var(--line)">'
       +'<span>Total visible</span><b>'+uni(tot)+'</b></div>';
+    tip.classList.remove("ancho");
     tip.innerHTML = '<h4>'+esc(E[i].mes)+' · '+esc(E[i].fy)+'</h4>'+filas;
     tip.style.opacity="1";
     tip.style.left = Math.min(Math.max(x(i)/W*r.width+14,0), r.width-tip.offsetWidth-4)+"px";
@@ -702,6 +724,25 @@ function dibujar(){
   });
   cont.querySelector("#cap").addEventListener("mouseleave", function(){
     tip.style.opacity="0"; cruz.setAttribute("opacity","0"); pintarFoco(null); });
+  FOCO = pintarFoco;
+
+  // globo de los decretos
+  cont.querySelectorAll(".marca-dec").forEach(function(g){
+    g.addEventListener("mouseenter", function(){
+      const r = svg.getBoundingClientRect();
+      const i = +g.dataset.ev;
+      const f = g.dataset.fecha;
+      tip.classList.add("ancho");
+      tip.innerHTML = '<h4>'+esc(f.slice(8,10)+"/"+f.slice(5,7)+"/"+f.slice(0,4))+'</h4>'
+        + '<div class="ev-tit">'+esc(g.dataset.tit)+'</div>'
+        + '<div class="ev-det">'+esc(g.dataset.det)+'</div>';
+      tip.style.opacity = "1";
+      tip.style.left = Math.min(Math.max(x(i)/W*r.width+14,0), r.width-tip.offsetWidth-4)+"px";
+      tip.style.top = "4px";
+    });
+    g.addEventListener("mouseleave", function(){
+      tip.style.opacity="0"; tip.classList.remove("ancho"); });
+  });
 
   pintarLeyenda();
   dibujarFlot();
@@ -722,11 +763,15 @@ function pintarLeyenda(){
         + '<button class="acc" data-todo="off">Ocultar todas</button></span>';
   document.getElementById("leyenda").innerHTML = html;
   document.querySelectorAll("#leyenda [data-k]").forEach(function(b){
+    const id = b.dataset.seg+"|"+b.dataset.k;
     b.onclick = function(){
-      const id = b.dataset.seg+"|"+b.dataset.k;
       if(S.apagadas[id]) delete S.apagadas[id]; else S.apagadas[id]=true;
       dibujar();
     };
+    // Con 14 tonos del mismo color la leyenda sola no alcanza: pasar el mouse
+    // por la etiqueta aisla su linea en el grafico.
+    b.onmouseenter = function(){ if(FOCO && !S.apagadas[id]) FOCO(id); };
+    b.onmouseleave = function(){ if(FOCO) FOCO(null); };
   });
   document.querySelectorAll("#leyenda [data-todo]").forEach(function(b){
     b.onclick = function(){
@@ -767,42 +812,95 @@ function dolarHoy(){
   return '<span class="hoy">Dólar BNA <b>$'+num(d.valor,0)+'</b><i>'+esc(f)+'</i></span>';
 }
 
+function rangoFicha(){
+  const todos = ejeCompleto();
+  if(!todos.length) return null;
+  if(!S.fDesde || !S.fHasta){
+    const fy = todos[todos.length-1].fy;
+    const delFy = todos.filter(function(p){ return p.fy===fy; });
+    S.fDesde = (delFy[0] || todos[0]).clave;
+    S.fHasta = todos[todos.length-1].clave;
+  }
+  return todos.filter(function(p){ return p.clave>=S.fDesde && p.clave<=S.fHasta; });
+}
+function unAnioAntes(clave){
+  return (parseInt(clave.slice(0,4),10)-1) + "-" + clave.slice(5);
+}
+/* Suma del periodo, de la serie mensual: sirve igual para AOR y para Pais. */
+function sumaPeriodo(seg, claves, med, col){
+  let t = 0, hay = false;
+  claves.forEach(function(c){
+    const p = puntos(seg).find(function(x){ return x.clave===c; });
+    if(!p) return;
+    const v = (p[med]||{})[col];
+    if(v!=null){ t += v; hay = true; }
+  });
+  return hay ? t : null;
+}
+
 function pintarFichas(){
-  const mes = APP.meses[S.clave];
   const cont = document.getElementById("fichas");
-  const fyAct = mes.fy, fyAnt = "FY" + (parseInt(mes.fy.slice(2),10)-1);
+  const E = rangoFicha();
+  if(!E || !E.length){ cont.innerHTML=""; return; }
+
+  const seg = S.seg;
+  const dealerNom = APP.meses[S.clave].dealer;
+  const claves = E.map(function(p){ return p.clave; });
+  const clavesAnt = claves.map(unAnioAntes);
+  const todos = ejeCompleto().map(function(p){ return p.clave; });
+  const hayAnt = clavesAnt.every(function(c){ return todos.indexOf(c)>=0; });
+
+  const etAct = E[0].mes + " a " + E[E.length-1].mes;
+  const etAnt = hayAnt
+    ? ejeCompleto().find(function(p){ return p.clave===clavesAnt[0]; }).mes + " a "
+      + ejeCompleto().find(function(p){ return p.clave===clavesAnt[clavesAnt.length-1]; }).mes
+    : null;
 
   const linea = function(rot, hoy, antes, esShare){
-    const v = esShare ? ((hoy!=null&&antes!=null) ? hoy-antes : null)
-                      : varPc(hoy, antes);
+    const v = esShare ? ((hoy!=null&&antes!=null) ? hoy-antes : null) : varPc(hoy, antes);
     return '<div class="linea">'
       + '<span class="rot">'+esc(rot)+'</span>'
       + '<span class="hoy">'+(esShare ? (hoy==null?"—":num(hoy,1)+"%") : uni(hoy))+'</span>'
-      + '<span class="antes">'+esc(fyAnt)+': '
-        +(esShare ? (antes==null?"—":num(antes,1)+"%") : uni(antes))+'</span>'
+      + '<span class="antes">'+(antes==null ? "sin dato anterior"
+          : (esShare ? num(antes,1)+"%" : uni(antes)))+'</span>'
       + '<span class="delta '+cls(v)+'">'+flecha(v)+' '+txtVar(v, esShare?" pp":"%")+'</span>'
       + '</div>';
   };
 
-  // Una sola ficha: la del segmento elegido arriba, el mismo interruptor que
-  // manda en las tablas.
-  const fichas = [S.seg].filter(function(seg){
-    return tabInf(mes,seg,"FYTD") && tabInf(mes,seg,"LFYTD"); }).map(function(seg){
-    const tf = tabInf(mes,seg,"FYTD"), tl = tabInf(mes,seg,"LFYTD");
-    const ambito = function(col, et){
-      return '<div class="ambito"><h4>'+esc(et)+'</h4>'
-        + linea("Industria", valInf(tf,"industria",col), valInf(tl,"industria",col), false)
-        + linea(mes.dealer,  valInf(tf,"dealer",col),    valInf(tl,"dealer",col),    false)
-        + linea("Market share", valInf(tf,"share",col),  valInf(tl,"share",col),     true)
-        + '</div>';
-    };
-    return '<div class="ficha '+(seg==="cosechadoras"?"cos":"")+'">'
-      + '<div class="ficha-cab"><b>'+SEG_ES[seg]+'</b><span>'+esc(fyAct)+' vs '+esc(fyAnt)+'</span></div>'
-      + '<div class="ficha-cuerpo">'+ambito("AOR","AOR")+ambito("PAIS","País")+'</div>'
+  const ambito = function(col, et){
+    const iA = sumaPeriodo(seg, claves, "industria", col);
+    const dA = sumaPeriodo(seg, claves, "dealer", col);
+    const iB = hayAnt ? sumaPeriodo(seg, clavesAnt, "industria", col) : null;
+    const dB = hayAnt ? sumaPeriodo(seg, clavesAnt, "dealer", col) : null;
+    const sA = (iA && dA!=null) ? dA/iA*100 : null;
+    const sB = (iB && dB!=null) ? dB/iB*100 : null;
+    return '<div class="ambito"><h4>'+esc(et)+'</h4>'
+      + linea("Industria", iA, iB, false)
+      + linea(dealerNom,   dA, dB, false)
+      + linea("Market share", sA, sB, true)
       + '</div>';
-  }).join("");
+  };
 
-  cont.innerHTML = fichas;
+  const ops = function(sel){
+    return ejeCompleto().map(function(p){
+      return '<option value="'+p.clave+'"'+(p.clave===sel?" selected":"")+'>'+esc(p.mes)+'</option>';
+    }).join("");
+  };
+
+  cont.innerHTML = '<div class="ficha '+(seg==="cosechadoras"?"cos":"")+'">'
+    + '<div class="ficha-cab"><b>'+SEG_ES[seg]+'</b>'
+      + '<span class="ficha-per">de <select id="f-desde">'+ops(S.fDesde)+'</select>'
+      + ' a <select id="f-hasta">'+ops(S.fHasta)+'</select></span>'
+      + '<span class="ficha-vs">'+esc(etAct)+(etAnt ? ' vs '+esc(etAnt) : ' · sin período anterior')+'</span>'
+    + '</div>'
+    + '<div class="ficha-cuerpo">'+ambito("AOR","AOR")+ambito("PAIS","País")+'</div>'
+    + '</div>';
+
+  const dd = document.getElementById("f-desde"), hh = document.getElementById("f-hasta");
+  dd.onchange = function(){ S.fDesde = dd.value;
+    if(S.fDesde > S.fHasta) S.fHasta = S.fDesde; pintarFichas(); };
+  hh.onchange = function(){ S.fHasta = hh.value;
+    if(S.fHasta < S.fDesde) S.fDesde = S.fHasta; pintarFichas(); };
 }
 
 /* ==================== contexto ==================== */

@@ -22,12 +22,17 @@ El paso 3 lee todos los PDF de `datos/`, acumula cada mes en
 
 Una sola página:
 
-0. **Una ficha arriba de todo**, del segmento que esté elegido en el
-   interruptor Tractores / Cosechadoras, el mismo que manda en las tablas.
-   Compara el año fiscal en curso contra el anterior, en **AOR y en País**,
-   para tres filas: industria, Cetomaq y market share. Sale directo de las
-   tablas FYTD y LFYTD del informe elegido, así que cambia con el selector de
-   informe y con el de segmento.
+0. **Una ficha arriba de todo**, del segmento elegido en el interruptor
+   Tractores / Cosechadoras. Compara **período contra el mismo período del año
+   anterior**, en AOR y en País, para industria, Cetomaq y market share. El
+   período se elige con dos selectores en la propia ficha: por defecto el año
+   fiscal en curso, pero se puede acotar — nov-25 a mar-26 se compara contra
+   nov-24 a mar-25.
+
+   Los totales se suman de la serie mensual, no del LFYTD del PDF. Eso hace que
+   el AOR se compare contra **lo que se publicó en su momento**, no contra el
+   dato recalculado: en el año fiscal completo da −2,9% en vez del −18,2% que
+   informa el reporte. País no cambia, porque no se recalcula.
 
 1. **Tablas del informe** — FYTD y LFYTD tal cual salen del PDF, sin nada
    calculado encima. El interruptor de segmento manda también en la ficha de
@@ -63,6 +68,13 @@ Una sola página:
    grilla con todos los indicadores en miniatura y su último valor. Toma el
    mismo rango de meses que el gráfico de ventas y se actualiza cuando lo
    cambiás, pero cada indicador conserva su propia escala.
+
+### Cómo se distingue cada línea
+
+Con 14 tonos de un mismo color los vecinos se parecen, así que hay tres ayudas:
+el **grosor** crece con la potencia (segunda pista ordenada, además del tono),
+pasar el mouse por una **etiqueta de la leyenda** aísla su línea, y pasar el
+mouse por el gráfico aísla la más cercana.
 
 ### Por qué una rampa y no 18 colores
 
