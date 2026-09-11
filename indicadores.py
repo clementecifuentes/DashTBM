@@ -152,10 +152,17 @@ def main():
         print("  OK %-11s %s .. %s  (%d meses, %d datos diarios)"
               % (clave, ms[0], ms[-1], len(ms), len(crudo)))
 
+    hoy = None
     try:
+        diario = bajar_dolar_oficial()
         # Cierre y no promedio: interesa con que precio termino el mes, que es
         # contra lo que se compara una cotizacion de hoy.
-        series["oficial"] = mensualizar(bajar_dolar_oficial(), "cierre")
+        series["oficial"] = mensualizar(diario, "cierre")
+        if diario:
+            ultima = max(diario)
+            hoy = {"fecha": ultima[0], "valor": ultima[1]}
+            print("  OK %-11s %s  $%s (Banco Nación, venta)"
+                  % ("dólar hoy", ultima[0], ("%.0f" % ultima[1])))
         meta["oficial"] = {"etiqueta": "Dólar oficial Banco Nación (venta)",
                            "unidad": "$/US$", "fuente": "api.argentinadatos.com",
                            "modo": "cierre"}
@@ -221,7 +228,7 @@ def main():
 
     with open(SALIDA, "w", encoding="utf-8") as fh:
         json.dump({"series": series, "meta": meta, "eventos": eventos,
-                   "mostrar": MOSTRAR,
+                   "mostrar": MOSTRAR, "dolar_hoy": hoy,
                    "fuente": "BCRA, Banco Nación (vía argentinadatos) y FMI vía FRED",
                    "bajado": datetime.now().strftime("%Y-%m-%d %H:%M")},
                   fh, ensure_ascii=False, indent=1)

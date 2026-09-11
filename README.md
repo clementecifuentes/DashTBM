@@ -128,8 +128,13 @@ En la página se muestran solo **retenciones y tipo de cambio**; el resto igual
 se baja y queda guardado en `datos/indicadores.json`, así volver a mostrar una
 serie es agregar su clave a la lista `MOSTRAR` de `indicadores.py` y nada más.
 
-El dólar se muestra como **último valor de cada mes** (el cierre), y el gráfico
-termina donde termina el último informe TBM. Por eso el valor del borde no
+La banda verde de arriba muestra siempre la **cotización del día** del Banco
+Nación, con su fecha al lado. Es un dato congelado al momento de correr
+`indicadores.py`: se actualiza cada vez que se regenera la página, no en vivo.
+Por eso lleva la fecha pegada.
+
+Dentro del gráfico el dólar se muestra como **último valor de cada mes** (el
+cierre), y el gráfico termina donde termina el último informe TBM. Por eso el valor del borde no
 coincide con el del diario de hoy: jul-2026 cerró en 1.510 y sep-2026 va en
 1.535. Tanto la tira como la ventana dicen de qué mes es
 cada número, y la ventana avisa hasta dónde llega la serie.

@@ -49,6 +49,10 @@ body{margin:0;background:var(--bg);color:var(--ink);
   display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .tope .fy{background:var(--amarillo);color:#2a2a00;font-weight:700;font-size:.7rem;
   padding:1px 8px;border-radius:3px;letter-spacing:.03em}
+.tope .hoy{margin-left:2px;padding-left:11px;border-left:1px solid rgba(255,255,255,.32);
+  color:rgba(255,255,255,.92)}
+.tope .hoy b{font-weight:700;color:#fff}
+.tope .hoy i{font-style:normal;color:rgba(255,255,255,.65);font-size:.72rem;margin-left:4px}
 .tope label{display:block;color:rgba(255,255,255,.8);font-size:.68rem;font-weight:600;
   text-transform:uppercase;letter-spacing:.09em;margin-bottom:4px}
 .tope select{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.4)}
@@ -754,6 +758,15 @@ function varPc(act, ant){
   return (act-ant)/ant*100;
 }
 
+/* Cotizacion del dia, aparte de la serie mensual: el grafico corta donde corta
+   el ultimo informe, pero el dolar de hoy tiene que estar a la vista. */
+function dolarHoy(){
+  const d = IND && IND.dolar_hoy;
+  if(!d || d.valor==null) return "";
+  const f = d.fecha.slice(8,10)+"/"+d.fecha.slice(5,7);
+  return '<span class="hoy">Dólar BNA <b>$'+num(d.valor,0)+'</b><i>'+esc(f)+'</i></span>';
+}
+
 function pintarFichas(){
   const mes = APP.meses[S.clave];
   const cont = document.getElementById("fichas");
@@ -1035,7 +1048,8 @@ function armarControles(){
 function render(){
   const mes = APP.meses[S.clave];
   document.getElementById("sub").innerHTML =
-    esc(mes.dealer)+' · '+esc(mes.mes_es)+' <span class="fy">'+esc(mes.fy)+'</span>';
+    esc(mes.dealer)+' · '+esc(mes.mes_es)+' <span class="fy">'+esc(mes.fy)+'</span>'
+    + dolarHoy();
   document.title = "TBM "+mes.dealer+" — "+mes.mes_es;
   pintarFichas();
   pintarTablas();
