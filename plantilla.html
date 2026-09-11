@@ -402,8 +402,10 @@ const SEG_ES = {tractores:"Tractores", cosechadoras:"Cosechadoras"};
    cada segmento usa una rampa de un solo tono, de claro (chica) a oscuro (grande),
    en vez de 18 colores distintos que nadie puede distinguir. */
 const RAMPAS = {
-  tractores:   {claro:"#7db0ef", oscuro:"#08294f", dark:["#d5e6fb","#3d7fcc"]},
-  cosechadoras:{claro:"#eda875", oscuro:"#5c1f06", dark:["#fadcc4","#cf7434"]},
+  // En claro la maquina grande va oscura; en oscuro va clara. En los dos casos
+  // "mas contraste contra el fondo" = maquina mas grande, que es lo que se lee.
+  tractores:   {claro:"#7db0ef", oscuro:"#08294f", dark:["#2f6fc4","#d8e9fd"]},
+  cosechadoras:{claro:"#eda875", oscuro:"#5c1f06", dark:["#a85a24","#fadcc4"]},
 };
 const oscuro = () => window.matchMedia &&
   window.matchMedia("(prefers-color-scheme: dark)").matches;
