@@ -9,3 +9,6 @@ __pycache__/
 # scratch de exploracion
 _*.json
 _*.html
+
+# temporales de verificacion
+pub.tmp.html
