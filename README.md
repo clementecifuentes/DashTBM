@@ -22,12 +22,12 @@ El paso 3 lee todos los PDF de `datos/`, acumula cada mes en
 
 Una sola página:
 
-0. **Dos fichas arriba de todo** — total de unidades del rango elegido, una para
-   la industria del AOR y otra para Cetomaq, con la variación contra el mismo
-   tramo del año fiscal anterior y el market share del período. Se mueven con
-   todo lo que filtres abajo: rango de meses, segmento y tipos de máquina
-   prendidos. Si el rango no tiene su equivalente del año anterior cargado, lo
-   dice en vez de comparar contra un tramo incompleto.
+0. **Dos fichas arriba de todo**, una por segmento. Cada una compara el año
+   fiscal en curso contra el anterior, en **AOR y en País**, para tres filas:
+   industria, Cetomaq y market share. Salen directo de las tablas FYTD y LFYTD
+   del informe elegido, así que cambian con el selector de arriba. Cuando el
+   AOR informado difiere mucho del comparable, la ficha agrega al pie la
+   variación contra el dato del año anterior tal como se publicó entonces.
 
 1. **Tablas del informe** — FYTD y LFYTD tal cual salen del PDF, sin nada
    calculado encima. Selector de segmento arriba; click en el encabezado de una
@@ -78,9 +78,7 @@ informe al siguiente, así que el FYTD del AOR a veces baja. Cuando un extremo
 del rango es cero o negativo el Δ % se muestra como `—`, porque no es
 interpretable.
 
-El rango de meses arranca por defecto en el **año fiscal en curso**, que es el
-tramo que tiene su equivalente del año anterior y deja las fichas con algo que
-comparar desde el primer momento.
+El rango de meses del gráfico arranca por defecto en el **año fiscal en curso**.
 
 ## Cómo se leen los números
 

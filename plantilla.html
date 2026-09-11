@@ -77,26 +77,36 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--jd);outline-of
 
 /* ---------- tablas ---------- */
 /* ---------- fichas de cabecera ---------- */
-.fichas{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-  gap:14px;margin:26px 0 6px}
+.fichas{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
+  gap:14px;margin:26px 0 4px}
 .ficha{background:var(--sup);border:1px solid var(--line);border-radius:8px;
-  box-shadow:var(--sombra);padding:15px 17px;border-top:3px solid var(--jd)}
-.ficha.dealer{border-top-color:var(--amarillo)}
-.ficha .quien{font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;
-  font-weight:700;color:var(--jd)}
-.ficha.dealer .quien{color:#9a7d00}
-.ficha .alcance{font-size:.7rem;color:var(--ink-3);margin-top:1px}
-.ficha .total{font-size:1.85rem;font-weight:650;letter-spacing:-.03em;
-  margin:9px 0 0;line-height:1.05;font-variant-numeric:tabular-nums}
-.ficha .total small{font-size:.8rem;font-weight:500;color:var(--ink-3);
-  letter-spacing:0;margin-left:5px}
-.ficha .var{font-size:.85rem;font-weight:650;margin-top:7px;
-  display:flex;align-items:center;gap:6px}
-.ficha .contra{font-size:.73rem;color:var(--ink-3);margin-top:2px;line-height:1.5}
-.ficha .extra{font-size:.73rem;color:var(--ink-2);margin-top:9px;padding-top:8px;
-  border-top:1px dashed var(--line-2)}
-.ficha .extra b{color:var(--ink)}
-.fichas-nota{font-size:.73rem;color:var(--ink-3);margin:2px 0 0}
+  box-shadow:var(--sombra);border-top:3px solid var(--jd);overflow:hidden}
+.ficha.cos{border-top-color:#c96a2e}
+.ficha-cab{display:flex;align-items:baseline;justify-content:space-between;
+  gap:10px;padding:12px 16px 9px;border-bottom:1px solid var(--line)}
+.ficha-cab b{font-size:.92rem;font-weight:650;letter-spacing:-.01em}
+.ficha-cab span{font-size:.7rem;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--ink-3)}
+.ficha-cuerpo{display:grid;grid-template-columns:1fr 1fr}
+.ambito{padding:11px 16px 13px}
+.ambito+.ambito{border-left:1px solid var(--line)}
+.ambito h4{margin:0 0 7px;font-size:.68rem;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--jd)}
+.ficha.cos .ambito h4{color:#a8541f}
+.linea{display:grid;grid-template-columns:1fr auto;gap:4px 8px;
+  align-items:baseline;padding:3px 0}
+.linea+.linea{border-top:1px dotted var(--line)}
+.linea .rot{font-size:.72rem;color:var(--ink-2)}
+.linea .hoy{font-size:.95rem;font-weight:700;font-variant-numeric:tabular-nums;
+  text-align:right}
+.linea .antes{font-size:.68rem;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.linea .delta{font-size:.72rem;font-weight:650;text-align:right;
+  font-variant-numeric:tabular-nums}
+.ficha-pie{font-size:.7rem;color:var(--ink-3);padding:8px 16px 10px;
+  border-top:1px dashed var(--line-2);line-height:1.45}
+.ficha-pie b{color:var(--ink-2)}
+@media (max-width:460px){.ficha-cuerpo{grid-template-columns:1fr}
+  .ambito+.ambito{border-left:0;border-top:1px solid var(--line)}}
 
 .caja{background:var(--sup);border:1px solid var(--line);border-radius:8px;
   overflow:hidden;box-shadow:var(--sombra)}
@@ -264,7 +274,6 @@ footer{margin-top:52px;padding-top:15px;border-top:1px solid var(--line);
   <div id="avisos"></div>
 
   <div class="fichas" id="fichas"></div>
-  <p class="fichas-nota" id="fichas-nota"></p>
 
   <section>
     <div class="rotulo"><i></i><b>Tablas del informe</b></div>
@@ -448,7 +457,7 @@ function dibujar(){
 
   if(E.length<2){
     cont.innerHTML = '<p class="nota">Elegí un rango de al menos dos meses.</p>';
-    pintarLeyenda(); pintarFichas(E); return;
+    pintarLeyenda(); return;
   }
 
   const hayEv = IND && IND.eventos && IND.eventos.length;
@@ -702,7 +711,6 @@ function dibujar(){
     tip.style.opacity="0"; cruz.setAttribute("opacity","0"); pintarFoco(null); });
 
   pintarLeyenda();
-  pintarFichas(E);
   dibujarFlot();
 }
 
@@ -741,79 +749,68 @@ function pintarLeyenda(){
 }
 
 /* ============ fichas de cabecera ============
-   Reflejan lo mismo que mostraba la tabla de variaciones, pero resumido a dos
-   numeros y arriba de todo: total del rango para la industria y para Cetomaq,
-   y cuanto vario contra el mismo tramo del anio fiscal anterior. Cambian con
-   el rango, el segmento y los tipos que tengas prendidos. */
-function mesAntes(clave){
-  const a = +clave.slice(0,4), m = clave.slice(5);
-  return (a-1)+"-"+m;
+   Salen directo de las tablas del informe elegido: FYTD contra LFYTD, en AOR y
+   en Pais, para la industria y para Cetomaq. Una ficha por segmento. */
+function tabInf(mes, seg, per){
+  return ((mes.segmentos[seg]||{})[per]) || null;
 }
-function totalRango(E, med){
-  let suma = 0, hay = false;
-  segsActivos().forEach(function(sg){
-    tipos(sg).forEach(function(c){
-      if(apagada(sg,c.key)) return;
-      E.forEach(function(e){
-        const v = valorDe(sg,c.key,e.clave,med);
-        if(v!=null){ suma += v; hay = true; }
-      });
-    });
-  });
-  return hay ? suma : null;
+function valInf(t, tipo, col){
+  if(!t) return null;
+  const i = t.columnas.indexOf(col);
+  const f = t.filas.find(function(x){ return x.tipo===tipo; });
+  return (i<0 || !f) ? null : f.valores[i];
 }
-function pintarFichas(E){
+function varPc(act, ant){
+  if(act==null || ant==null || ant===0) return null;
+  return (act-ant)/ant*100;
+}
+
+function pintarFichas(){
+  const mes = APP.meses[S.clave];
   const cont = document.getElementById("fichas");
-  const nota = document.getElementById("fichas-nota");
-  if(!E.length){ cont.innerHTML=""; nota.textContent=""; return; }
+  const fyAct = mes.fy, fyAnt = "FY" + (parseInt(mes.fy.slice(2),10)-1);
 
-  // mismo tramo del anio fiscal anterior, solo si esta completo en el historico
-  const todos = ejeCompleto().map(function(p){ return p.clave; });
-  const previo = E.map(function(p){ return mesAntes(p.clave); });
-  const completo = previo.every(function(c){ return todos.indexOf(c)>=0; });
-  const Eprev = completo ? previo.map(function(c){
-      return ejeCompleto().find(function(p){ return p.clave===c; }); }) : null;
-
-  const etRango = E[0].mes + " a " + E[E.length-1].mes;
-  const etPrev = Eprev ? (Eprev[0].mes + " a " + Eprev[Eprev.length-1].mes) : null;
-  const alcance = segsActivos().map(function(x){ return SEG_ES[x]; }).join(" y ");
-
-  const ficha = function(med, clase){
-    const act = totalRango(E, med);
-    const ant = Eprev ? totalRango(Eprev, med) : null;
-    const v = (act!=null && ant!=null && ant!==0) ? (act-ant)/ant*100 : null;
-    const dif = (act!=null && ant!=null) ? act-ant : null;
-    let bloque;
-    if(ant==null){
-      bloque = '<div class="contra">No hay un tramo equivalente del año fiscal '
-             + 'anterior cargado, así que no hay contra qué comparar.</div>';
-    } else {
-      bloque = '<div class="var '+cls(v)+'">'+flecha(v)+' '+txtVar(v)+'</div>'
-             + '<div class="contra">contra <b>'+uni(ant)+'</b> u. en '+esc(etPrev)
-             + ' · '+sgn(dif)+' u.</div>';
-    }
-    return '<div class="ficha '+clase+'">'
-      + '<div class="quien">'+(med==="industria"?"Industria del AOR":"Cetomaq")+'</div>'
-      + '<div class="alcance">'+esc(alcance)+' · '+esc(etRango)+'</div>'
-      + '<div class="total">'+uni(act)+'<small>unidades</small></div>'
-      + bloque + '</div>';
+  const linea = function(rot, hoy, antes, esShare){
+    const v = esShare ? ((hoy!=null&&antes!=null) ? hoy-antes : null)
+                      : varPc(hoy, antes);
+    return '<div class="linea">'
+      + '<span class="rot">'+esc(rot)+'</span>'
+      + '<span class="hoy">'+(esShare ? (hoy==null?"—":num(hoy,1)+"%") : uni(hoy))+'</span>'
+      + '<span class="antes">'+esc(fyAnt)+': '
+        +(esShare ? (antes==null?"—":num(antes,1)+"%") : uni(antes))+'</span>'
+      + '<span class="delta '+cls(v)+'">'+flecha(v)+' '+txtVar(v, esShare?" pp":"%")+'</span>'
+      + '</div>';
   };
 
-  const ind = totalRango(E,"industria"), dea = totalRango(E,"dealer");
-  const share = (ind && dea!=null) ? dea/ind*100 : null;
-  let html = ficha("industria","") + ficha("dealer","dealer");
-  cont.innerHTML = html;
-  const extra = document.querySelectorAll(".ficha")[1];
-  if(extra && share!=null)
-    extra.insertAdjacentHTML("beforeend",
-      '<div class="extra">Market share del período: <b>'+num(share,1)+'%</b></div>');
+  const fichas = ["tractores","cosechadoras"].filter(function(seg){
+    return tabInf(mes,seg,"FYTD") && tabInf(mes,seg,"LFYTD"); }).map(function(seg){
+    const tf = tabInf(mes,seg,"FYTD"), tl = tabInf(mes,seg,"LFYTD");
+    const ambito = function(col, et){
+      return '<div class="ambito"><h4>'+esc(et)+'</h4>'
+        + linea("Industria", valInf(tf,"industria",col), valInf(tl,"industria",col), false)
+        + linea(mes.dealer,  valInf(tf,"dealer",col),    valInf(tl,"dealer",col),    false)
+        + linea("Market share", valInf(tf,"share",col),  valInf(tl,"share",col),     true)
+        + '</div>';
+    };
+    // El AOR del anio anterior se recalcula hacia arriba con los meses, asi que
+    // el LFYTD exagera la caida. Se agrega el cotejo contra el dato publicado
+    // en su momento, que es el unico comparable de verdad.
+    const prev = APP.meses[(parseInt(mes.clave.slice(0,4),10)-1)+"-"+mes.clave.slice(5)];
+    const tp = prev ? tabInf(prev,seg,"FYTD") : null;
+    const vRep = varPc(valInf(tf,"industria","AOR"), valInf(tl,"industria","AOR"));
+    const vCmp = varPc(valInf(tf,"industria","AOR"), valInf(tp,"industria","AOR"));
+    const pie = (vCmp!=null && vRep!=null && Math.abs(vCmp-vRep)>=3)
+      ? '<div class="ficha-pie">Industria AOR contra el dato de '+esc(fyAnt)
+        + ' publicado en su momento ('+uni(valInf(tp,"industria","AOR"))+' u.): '
+        + '<b class="'+cls(vCmp)+'">'+txtVar(vCmp)+'</b></div>'
+      : "";
+    return '<div class="ficha '+(seg==="cosechadoras"?"cos":"")+'">'
+      + '<div class="ficha-cab"><b>'+SEG_ES[seg]+'</b><span>'+esc(fyAct)+' vs '+esc(fyAnt)+'</span></div>'
+      + '<div class="ficha-cuerpo">'+ambito("AOR","AOR")+ambito("PAIS","País")+'</div>'
+      + pie + '</div>';
+  }).join("");
 
-  const nVis = segsActivos().reduce(function(n,sg){
-    return n + tipos(sg).filter(function(c){ return !apagada(sg,c.key); }).length; }, 0);
-  const nTot = segsActivos().reduce(function(n,sg){ return n + tipos(sg).length; }, 0);
-  nota.textContent = "Suman los " + nVis + " de " + nTot + " tipos de máquina que "
-    + "tenés prendidos en el gráfico, y se mueven con el rango de meses."
-    + (Eprev ? "" : " Elegí un rango que tenga su equivalente del año anterior para ver la variación.");
+  cont.innerHTML = fichas;
 }
 
 /* ==================== contexto ==================== */
@@ -1061,6 +1058,7 @@ function render(){
   document.getElementById("sub").innerHTML =
     esc(mes.dealer)+' · '+esc(mes.mes_es)+' <span class="fy">'+esc(mes.fy)+'</span>';
   document.title = "TBM "+mes.dealer+" — "+mes.mes_es;
+  pintarFichas();
   pintarTablas();
   document.getElementById("pie").innerHTML =
     'Fuente: '+esc(mes.archivo)+' · John Deere TBM Dealer Analysis'
