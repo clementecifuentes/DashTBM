@@ -632,13 +632,22 @@ function dibujar(){
 
   cont.innerHTML =
     '<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Unidades por mes y tipo de máquina">'
-    + bandas + grid + fy + cintaSVG + decSVG + tcSVG
+    + bandas + grid + fy + cintaSVG + tcSVG
     + '<line x1="'+mL+'" x2="'+(W-mR)+'" y1="'+y(0)+'" y2="'+y(0)+'" stroke="var(--line-2)"/>'
     + etY + etX
     + '<path id="area-foco" d="" fill="none" opacity="0"/>'
-    + lineas + '<g id="marcas-foco"></g>' 
+    + lineas + '<g id="marcas-foco"></g>'
+    // apagar todas las categorias dejaba una grilla muda: que lo diga
+    + (datos.some(function(z){ return !z.off; }) ? "" :
+        '<text x="'+(W/2)+'" y="'+(mT2+ih/2-6)+'" text-anchor="middle" fill="var(--ink-2)" '
+        + 'font-size="13" font-weight="600">No hay ningún tipo de máquina visible</text>'
+        + '<text x="'+(W/2)+'" y="'+(mT2+ih/2+14)+'" text-anchor="middle" fill="var(--ink-3)" '
+        + 'font-size="11.5">Usá «Mostrar todas» en la leyenda de abajo</text>') 
     + '<line id="cruz" x1="0" x2="0" y1="'+mT2+'" y2="'+(mT2+ih)+'" stroke="var(--ink-3)" stroke-dasharray="3 3" opacity="0"/>'
     + '<rect x="'+mL+'" y="'+mT2+'" width="'+iw+'" height="'+ih+'" fill="transparent" id="cap"/>'
+    // Las marcas de decreto van al final, encima del rectangulo que captura el
+    // mouse: si van antes, el rectangulo se come el hover y no se abren nunca.
+    + decSVG
     + '</svg><div class="tip" id="tip"></div>';
 
   const svg=cont.querySelector("svg"), tip=cont.querySelector("#tip"), cruz=cont.querySelector("#cruz");
