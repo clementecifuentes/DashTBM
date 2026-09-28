@@ -229,6 +229,23 @@ def parsear_bloque(filas, i_titulo, i_fin, segmento, dealer):
     if not datos:
         return None
 
+    # El nombre largo del dealer puede partirse en dos renglones y arrastrar
+    # parte de sus numeros al segundo ("Rural Ceres Dealer 0.0 0.0 4.0 0.0" /
+    # "S.A. 4.0 4.0 4"). Eso creaba una fila fantasma y dejaba al dealer sin
+    # AOR, Territorio y Pais. Si dos filas seguidas llenan columnas que la otra
+    # tiene vacias, son la misma fila partida: se unen.
+    unidas = [datos[0]]
+    for a in datos[1:]:
+        prev = unidas[-1]
+        comunes = set(prev[2]) & set(a[2])
+        if not comunes and (len(prev[2]) + len(a[2])) <= n_col:
+            prev[1] = (prev[1] + " " + a[1]).strip()
+            prev[2].update(a[2])
+            prev[3].update(a[3])
+        else:
+            unidas.append(a)
+    datos = unidas
+
     out = []
     for i, a in enumerate(datos):
         n = normalizar(a[1])
