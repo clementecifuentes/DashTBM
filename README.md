@@ -215,10 +215,11 @@ El panel usa **eje y propio** y comparte solo el eje x con el gráfico de
 unidades. Superponer dos escalas en un mismo dibujo es la forma clásica de
 fabricar correlaciones que no están en los datos.
 
-## Informes escaneados
+## Informes sin capa de texto
 
-Feb-2026 y Jun-2026 llegaron con el texto convertido a curvas (sin capa de
-texto). Están transcriptos a mano en `datos/manual/transcribir.py`, que valida
+Feb-2026 y Jun-2026 no son escaneos de papel: llegaron con el texto convertido
+a curvas, cada letra es un dibujo y no queda nada para extraer (pesan unas
+siete veces mas que un informe normal y tienen cero caracteres). Están transcriptos a mano en `datos/manual/transcribir.py`, que valida
 cada cifra contra dos condiciones independientes antes de generar el JSON:
 Industria = suma de las filas, y Market Share = dealer / industria. Si llega
 otro informe así, se agrega ahí siguiendo el mismo formato.
@@ -244,7 +245,25 @@ otro informe así, se agrega ahí siguiendo el mismo formato.
 - en alguna categoría o en el AOR la fila *Industria* no es la suma de las demás
   (tolerancia 2%);
 - no puede interpretar el encabezado de una columna;
-- faltan meses en la serie.
+- faltan meses en la serie;
+- **el LFYTD del dealer no coincide con el FYTD del mismo mes del año anterior**,
+  columna por columna. Son las mismas unidades vendidas mirándolas dos veces, así
+  que cualquier diferencia es un error de lectura, no un dato distinto;
+- **el FYTD del dealer retrocede** dentro del mismo año fiscal, cuando es una
+  serie acumulada y solo puede subir.
+
+Los dos últimos son los que sirven de verdad, porque no dependen de que las
+cuentas cierren dentro de una misma tabla. El error que tuvieron los informes de
+nov-2024 a feb-2025 —el nombre del dealer partido en dos renglones, que se
+llevaba el AOR, el Territorio y el País a una fila fantasma— pasaba los tres
+primeros controles sin problema: la Industria seguía siendo la suma de las filas.
+El cruce contra el año anterior es el único que lo detecta.
+
+Ese cruce se hace **solo sobre el dealer**. La industria no sirve para esto:
+Deere reasigna unidades entre AOR de un informe al otro y sus acumulados suben y
+bajan (cosechadoras AOR FY26: 22,3 en junio, 19,6 en julio, 21,3 en agosto). Son
+correcciones del fabricante, no errores de lectura, y avisar por cada una taparía
+los avisos que importan.
 
 El formato del reporte no es fijo: **omite las columnas que están en cero** (en
 nov-2024 la tabla LFYTD de cosechadoras trae 2 categorías en vez de 4) y los

@@ -21,7 +21,9 @@ Notas de formato (verificadas sobre 21 informes, nov-2024 a jul-2026):
     que la serie mensual sea continua, pero se conserva el texto original
     del PDF para mostrar las tablas tal cual.
   - El anio fiscal arranca en NOVIEMBRE: el FYTD se resetea ahi.
-  - Los PDF escaneados (sin capa de texto) se transcriben aparte, en
+  - Algunos PDF llegan con el texto convertido a curvas: cada letra es un
+    dibujo y no queda nada que extraer. No son escaneos de papel, pesan unas
+    siete veces mas que los normales. Esos se transcriben aparte, en
     datos/manual/<clave>.json, con el mismo formato que genera este script.
 """
 
@@ -339,6 +341,60 @@ def verificar(d):
                            % (d["clave"], nom_seg, periodo, clave, suma, real))
 
 
+def verificar_cruzado(historico):
+    """Controles que solo se pueden hacer con varios meses cargados.
+
+    Son los dos que en la practica detectan errores de lectura, porque no
+    dependen de que las cuentas cierren dentro de una misma tabla:
+
+      1. El LFYTD de un mes tiene que coincidir con el FYTD del mismo mes del
+         anio anterior, en las unidades propias del dealer. Esas no se
+         recalculan nunca, asi que cualquier diferencia es un error de lectura.
+         (La industria si se recalcula: ahi la diferencia es normal.)
+      2. El FYTD del dealer es acumulado y no puede bajar dentro del mismo anio
+         fiscal. Este control es solo para el dealer a proposito: la industria
+         SI baja a veces, porque Deere reasigna unidades entre AOR de un informe
+         al otro (por ejemplo cosechadoras AOR FY26: 22,3 en junio, 19,6 en
+         julio y 21,3 en agosto). Eso es una correccion de Deere, no un error de
+         lectura, y avisar por cada una taparia los avisos que si importan.
+    """
+    def tabla(cl, seg, per):
+        return historico.get(cl, {}).get("segmentos", {}).get(seg, {}).get(per)
+
+    def val(t, tipo, col):
+        if not t or col not in t["columnas"]:
+            return None
+        f = next((f for f in t["filas"] if f["tipo"] == tipo), None)
+        return f["valores"][t["columnas"].index(col)] if f else None
+
+    def pares(ta, tb):
+        """Columnas presentes en las dos tablas, para poder compararlas."""
+        return [c for c in ta["columnas"] if c in tb["columnas"]] if ta and tb else []
+
+    claves = sorted(historico)
+    for cl in claves:
+        antes = "%d-%s" % (int(cl[:4]) - 1, cl[5:])
+        for seg in ("tractores", "cosechadoras"):
+            ta, tb = tabla(cl, seg, "LFYTD"), tabla(antes, seg, "FYTD")
+            for col in pares(ta, tb):
+                a, b = val(ta, "dealer", col), val(tb, "dealer", col)
+                if a is not None and b is not None and abs(a - b) > 0.05:
+                    avisar("%s %s %s: el LFYTD del dealer da %.1f y el FYTD de "
+                           "%s daba %.1f" % (cl, seg, col, a, antes, b))
+
+    for i, cl in enumerate(claves[1:], 1):
+        prev = claves[i - 1]
+        if historico[cl].get("fy") != historico[prev].get("fy"):
+            continue          # arranca otro anio fiscal, el FYTD se resetea
+        for seg in ("tractores", "cosechadoras"):
+            ta, tb = tabla(prev, seg, "FYTD"), tabla(cl, seg, "FYTD")
+            for col in pares(ta, tb):
+                a, b = val(ta, "dealer", col), val(tb, "dealer", col)
+                if a is not None and b is not None and b < a - 0.05:
+                    avisar("%s %s %s: el FYTD del dealer baja de %.1f a %.1f "
+                           "dentro del mismo anio fiscal" % (cl, seg, col, a, b))
+
+
 def serie_mensual(historico):
     """FYTD es acumulado: las unidades del mes son la diferencia con el mes
     anterior del mismo anio fiscal (y en noviembre, el FYTD mismo)."""
@@ -430,19 +486,20 @@ def main():
         with open(HISTORICO, encoding="utf-8") as fh:
             historico = json.load(fh)
         print("Partiendo del historico existente (%d meses)" % len(historico))
-    escaneados = []
+    sin_texto = []
     for ruta in pdfs:
         try:
             d = parsear_pdf(ruta)
         except SystemExit as e:
-            escaneados.append(os.path.basename(ruta))
-            print("  [!] sin capa de texto (escaneado): %s" % os.path.basename(ruta))
+            sin_texto.append(os.path.basename(ruta))
+            print("  [!] sin capa de texto, el texto vino convertido a curvas: %s"
+                  % os.path.basename(ruta))
             continue
         verificar(d)
         historico[d["clave"]] = d
         print("  OK -> %s | %s | %s" % (d["mes_es"], d["dealer"], d["fy"]))
 
-    # Meses transcriptos a mano (PDF escaneados)
+    # Meses transcriptos a mano (PDF sin capa de texto)
     for ruta in sorted(glob.glob(os.path.join(DIR_MANUAL, "*.json"))):
         with open(ruta, encoding="utf-8") as fh:
             d = json.load(fh)
@@ -454,6 +511,7 @@ def main():
         raise SystemExit("No se pudo procesar ningun informe")
 
     historico = dict(sorted(historico.items()))
+    verificar_cruzado(historico)
     faltan = huecos(historico)
     if faltan:
         avisar("faltan meses en la serie: " + ", ".join(faltan))
@@ -485,9 +543,9 @@ def main():
     print("\nHistorico: %d meses (%s a %s)" % (
         len(historico), min(historico), max(historico)))
     print("Dashboard -> " + SALIDA)
-    if escaneados:
-        print("\nPDF escaneados, pendientes de transcribir a datos/manual/:")
-        for e in escaneados:
+    if sin_texto:
+        print("\nPDF sin texto extraible, pendientes de transcribir a datos/manual/:")
+        for e in sin_texto:
             print("  - " + e)
     if AVISOS:
         print("\n%d aviso(s)." % len(AVISOS))
