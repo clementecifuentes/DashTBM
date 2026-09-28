@@ -406,7 +406,13 @@ def main():
                 vistos.add(r.lower())
                 pdfs.append(r)
 
+    # Si se pasan archivos sueltos hay que MEZCLAR con lo que ya esta cargado:
+    # arrancar de cero borraria el resto del historico.
     historico = {}
+    if len(sys.argv) > 1 and os.path.exists(HISTORICO):
+        with open(HISTORICO, encoding="utf-8") as fh:
+            historico = json.load(fh)
+        print("Partiendo del historico existente (%d meses)" % len(historico))
     escaneados = []
     for ruta in pdfs:
         try:
