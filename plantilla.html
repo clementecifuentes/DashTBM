@@ -152,18 +152,33 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--jd);outline-of
 .fichas{display:grid;grid-template-columns:780px 1fr;gap:18px;
   align-items:start;margin:26px 0 4px}
 @media (max-width:1100px){ .fichas{grid-template-columns:1fr} }
-.ficha-concl{background:var(--sup);border:1px solid var(--line);border-radius:8px;
-  box-shadow:var(--sombra);border-top:3px solid var(--amarillo);
-  padding:11px 16px 13px}
-.ficha-concl h4{margin:0 0 7px;font-size:.7rem;font-weight:700;
-  text-transform:uppercase;letter-spacing:.09em;color:var(--ink-3)}
-.ficha-concl ul{margin:0;padding-left:17px}
-.ficha-concl li{font-size:.78rem;line-height:1.5;margin:8px 0;color:var(--ink-2);
+/* Fondo verde claro en vez de blanco: al lado de la ficha, que es blanca, es
+   lo que hace que se lea como un bloque aparte y no como mas cuadro. */
+.ficha-concl{background:var(--jd-cl);border:1px solid var(--jd);
+  border-radius:8px;box-shadow:var(--sombra);border-top:3px solid var(--jd);
+  padding:13px 17px 15px}
+.ficha-concl h4{display:flex;align-items:center;gap:8px;margin:0 0 10px;
+  font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--jd-osc)}
+.ficha-concl h4::before{content:"";width:18px;height:3px;border-radius:2px;
+  background:var(--amarillo);flex:none}
+.ficha-concl ul{margin:0;padding:0;list-style:none}
+.ficha-concl li{position:relative;padding-left:16px;font-size:.81rem;
+  line-height:1.55;margin:9px 0;color:var(--ink-2);
   animation:subeNumero .42s cubic-bezier(.22,.7,.3,1) both}
+.ficha-concl li::before{content:"";position:absolute;left:0;top:.5em;
+  width:7px;height:7px;border-radius:2px;background:var(--jd)}
 .ficha-concl li:nth-child(2){animation-delay:.05s}
 .ficha-concl li:nth-child(3){animation-delay:.1s}
 .ficha-concl li:nth-child(4){animation-delay:.15s}
-.ficha-concl li b{color:var(--ink);font-weight:650}
+/* La cifra de cada punto va coloreada segun para donde va, igual que las
+   flechas de la ficha: es lo que se lee de un vistazo. */
+.ficha-concl li b{font-weight:700;color:var(--ink)}
+.ficha-concl li b.up{color:var(--up)}
+.ficha-concl li b.down{color:var(--down)}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .ficha-concl{border-color:var(--line-2)}
+}
 .ficha{background:var(--sup);border:1px solid var(--line);border-radius:8px;
   box-shadow:var(--sombra);border-top:3px solid var(--jd);overflow:hidden}
 .ficha.cos{border-top-color:#c96a2e}
@@ -529,7 +544,12 @@ function pintarTablas(){
    No hay modelo ni llamada a ninguna API. */
 function puntosFicha(d, dealerNom){
   const P = [];
-  const fuerte = function(t){ return '<b>'+t+'</b>'; };
+  // v opcional: si viene, la cifra se pinta verde o roja segun para donde va,
+  // con las mismas clases que usan las flechas de la ficha.
+  const fuerte = function(t, v){
+    const c = (v==null || Math.abs(v)<0.05) ? "" : (v>0 ? " class=\"up\"" : " class=\"down\"");
+    return '<b'+c+'>'+t+'</b>';
+  };
   const pc = function(a, b){ return varPc(a, b); };
   // Una variacion que redondea a cero no "crecio 0,0%": quedo igual.
   const nulo = function(v){ return Math.abs(v) < 0.05; };
@@ -545,7 +565,7 @@ function puntosFicha(d, dealerNom){
   if(vdA!=null && viA!=null){
     const juntos = nulo(vdA) || nulo(viA) || (vdA>=0) === (viA>=0);
     P.push(esc(dealerNom)+" "
-      + (nulo(vdA) ? "quedó igual" : mov(vdA)+" "+fuerte(abs1(vdA)))
+      + (nulo(vdA) ? "quedó igual" : mov(vdA)+" "+fuerte(abs1(vdA), vdA))
       + (juntos ? " y la industria de su AOR " : " mientras la industria de su AOR ")
       + var1(viA));
   }else if(a.dA!=null){
@@ -565,13 +585,14 @@ function puntosFicha(d, dealerNom){
       P.push("El market share del AOR se mantuvo en "+fuerte(num(a.sA,1)+"%"));
     else
       P.push("El market share del AOR "+movS(a.sA-a.sB)+" "
-        + fuerte(num(Math.abs(a.sA-a.sB),1)+" pp")+", hasta "+num(a.sA,1)+"%");
+        + fuerte(num(Math.abs(a.sA-a.sB),1)+" pp", a.sA-a.sB)
+        + ", hasta "+num(a.sA,1)+"%");
   }
 
   // 3) El pais, y si se puede, contra lo que paso en la zona.
   if(viP!=null){
     let t = "A nivel país la industria "
-      + (nulo(viP) ? "quedó igual" : mov(viP)+" "+fuerte(abs1(viP)));
+      + (nulo(viP) ? "quedó igual" : mov(viP)+" "+fuerte(abs1(viP), viP));
     if(viA!=null && !nulo(viP) && Math.abs(Math.abs(viP)-Math.abs(viA))>=3)
       t += (Math.abs(viP)>Math.abs(viA) ? ", bastante más que en la zona"
                                         : ", menos que en la zona");
@@ -583,7 +604,8 @@ function puntosFicha(d, dealerNom){
   // 4) Participacion nacional, solo si aporta algo mas que repetir el share.
   if(p.sA && p.sB!=null && Math.abs(p.sA-p.sB)>=0.05){
     P.push("La participación nacional "+movS(p.sA-p.sB)+" "
-      + fuerte(num(Math.abs(p.sA-p.sB),1)+" pp")+", hasta "+num(p.sA,1)+"%");
+      + fuerte(num(Math.abs(p.sA-p.sB),1)+" pp", p.sA-p.sB)
+      + ", hasta "+num(p.sA,1)+"%");
   }
   return P.slice(0, 4);
 }
