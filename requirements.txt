@@ -1,2 +1,4 @@
 pdfplumber
+
+# Solo para "conclusiones.py --api", que no se usa en el flujo normal.
 anthropic

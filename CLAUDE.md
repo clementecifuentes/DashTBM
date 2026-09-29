@@ -13,13 +13,19 @@ Un único PDF nuevo. Todo el resto del trabajo es mecánico:
 
 ```bash
 python indicadores.py      # dólar y retenciones al día
-python conclusiones.py     # conclusión del mes nuevo (necesita ANTHROPIC_API_KEY)
+python conclusiones.py     # vuelca los resúmenes de los filtros sin conclusión
 python procesar_tbm.py     # relee todos los PDF y regenera index.html
 ```
 
 `conclusiones.py` va **antes** de `procesar_tbm.py`, porque este último embebe en
-el HTML lo que aquél deja en `datos/conclusiones.json`. Si no hay key definida,
-avisa y no toca nada: se siguen publicando las conclusiones que ya estaban.
+el HTML lo que aquél deja en `datos/conclusiones.json`.
+
+Las conclusiones **las escribo yo en la conversación, no una API**: el script
+vuelca en `_pendientes.json` los resúmenes de las combinaciones que faltan (2 en
+un mes normal), se escriben los textos en un JSON `{"2026-08|tractores": "..."}`
+y se cargan con `python conclusiones.py --cargar <archivo>`. Máximo 5 oraciones
+y **solo números que estén en el resumen**; conviene verificarlo por máquina
+antes de cargar. Existe `--api`, que sí usa `ANTHROPIC_API_KEY`, pero no se usa.
 
 `procesar_tbm.py` sin argumentos relee todo `datos/*.pdf`. Con un archivo suelto
 como argumento procesa solo ese y lo **mezcla** con el histórico existente, no

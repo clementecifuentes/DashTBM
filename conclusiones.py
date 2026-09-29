@@ -1,36 +1,40 @@
 # -*- coding: utf-8 -*-
-"""Genera una conclusion corta por cada filtro de la tabla y la deja cacheada.
+"""Conclusiones del panel: una por cada filtro de la tabla (mes x segmento).
 
 El dashboard es un HTML estatico servido por GitHub Pages: no hay nada corriendo
 del lado del servidor cuando alguien lo mira. Asi que la conclusion se escribe
-ACA, al generar la pagina, y queda embebida en index.html. Ventajas sobre
-llamar al modelo desde el navegador:
+ACA, al generar la pagina, y queda embebida en index.html.
 
-  - la API key no sale de esta maquina (el repo es publico);
-  - el panel aparece instantaneo, sin esperar una respuesta;
-  - la pagina sigue funcionando sin conexion.
+Por defecto NO llama a ninguna API y no necesita ninguna clave. El flujo normal
+es que Clemente pase el PDF del mes y la conclusion se escriba en esa misma
+conversacion:
 
-El filtro de la tabla es mes x segmento: 22 x 2 = 44 combinaciones, y cada mes
-se agregan 2. Por eso el cache va por hash del resumen: si el resumen de una
-combinacion no cambio, se reusa el texto guardado y no se vuelve a llamar. En un
-mes normal eso son 2 llamadas, no 44.
+    python conclusiones.py --pendientes     # vuelca los resumenes que faltan
+    ... se escriben los textos en un JSON {"2026-08|tractores": "..."} ...
+    python conclusiones.py --cargar textos.json
 
-Al modelo NO se le manda la tabla: se le manda el resumen que arma resumen(),
-en JSON, con los totales, la variacion interanual y el top 3 de bandas de
-potencia.
+El cache va por hash del resumen: si el resumen de una combinacion no cambio,
+el texto guardado sigue valiendo y esa combinacion no vuelve a aparecer. En un
+mes normal son 2 conclusiones nuevas, no 44.
 
-Uso:
-    python conclusiones.py              # genera lo que falte o haya cambiado
-    python conclusiones.py --todo       # ignora el cache y regenera las 44
-    python conclusiones.py --modelo X   # usa otro modelo
+Queda tambien un modo que llama a la API de Anthropic, apagado por defecto:
 
-Necesita la variable de entorno ANTHROPIC_API_KEY. Si no esta, avisa y no toca
-nada: procesar_tbm.py sigue funcionando con las conclusiones que ya haya.
+    python conclusiones.py --api            # necesita ANTHROPIC_API_KEY
+
+No hace falta para el uso normal. Esta por si algun dia se arma el panel en
+vivo: un Worker que guarde la clave del lado del servidor y al que la pagina le
+pida la conclusion, que es la unica forma de que refleje tambien los filtros del
+grafico. La clave nunca se escribe a disco, solo se lee del entorno.
+
+Otros usos:
+    python conclusiones.py --todo           # ignora el cache, rehace las 44
+    python conclusiones.py --api --modelo X # otro modelo
 """
 
 import hashlib
 import json
 import os
+import re
 import sys
 from datetime import datetime
 
@@ -38,9 +42,11 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 HISTORICO = os.path.join(BASE, "datos", "historico.json")
 INDICADORES = os.path.join(BASE, "datos", "indicadores.json")
 SALIDA = os.path.join(BASE, "datos", "conclusiones.json")
+PENDIENTES = os.path.join(BASE, "_pendientes.json")   # _*.json esta en .gitignore
 
 MODELO = "claude-sonnet-5"
 MAX_TOKENS = 300
+MAX_ORACIONES = 5
 
 SEG_ES = {"tractores": "Tractores", "cosechadoras": "Cosechadoras"}
 
@@ -122,8 +128,8 @@ def indicadores_del_mes(ind, clave):
 def resumen(historico, ind, clave, seg):
     """Resumen compacto de una combinacion mes x segmento.
 
-    Es lo unico que ve el modelo. Tiene que ser estable: si cambia un byte,
-    el cache se invalida y se vuelve a llamar.
+    Es lo unico que se mira para escribir la conclusion. Tiene que ser estable:
+    si cambia un byte, el cache se invalida y esa combinacion vuelve a pedirse.
     """
     mes = historico[clave]
     segm = mes["segmentos"].get(seg) or {}
@@ -147,7 +153,7 @@ def resumen(historico, ind, clave, seg):
             "share_aor_pc": val(t, "share", "AOR"),
             "industria_pais": val(t, "industria", "PAIS"),
             "share_pais_pc": val(t, "share", "PAIS"),
-            "bandas_con_ventas": len([b for b in bandas(t, "industria")]),
+            "bandas_con_ventas": len(bandas(t, "industria")),
             "bandas_en_el_informe": len([c for c in t["columnas"]
                                          if c not in ("AOR", "TERRITORIO", "PAIS")]),
         }
@@ -164,10 +170,8 @@ def resumen(historico, ind, clave, seg):
 
     if fy:
         bd, bi = bandas(fy, "dealer"), bandas(fy, "industria")
-        r["bandas_fytd"] = {
-            "top3_concesionario": bd[:3],
-            "top3_industria_aor": bi[:3],
-        }
+        r["bandas_fytd"] = {"top3_concesionario": bd[:3],
+                            "top3_industria_aor": bi[:3]}
         if bi:
             us = [b["unidades"] for b in bi]
             r["bandas_fytd"]["industria_aor_min_max_promedio"] = [
@@ -184,6 +188,47 @@ def firma(r):
                           .encode("utf-8")).hexdigest()[:16]
 
 
+def oraciones(t):
+    # Los puntos de un numero (1.031, 3.937) no terminan una oracion.
+    t = re.sub(r"(?<=\d)\.(?=\d)", "", t)
+    return len([x for x in t.replace("!", ".").replace("?", ".").split(".")
+                if x.strip()])
+
+
+def cargar_textos(cache, pendientes, ruta):
+    """Mete los textos escritos a mano, con la firma del resumen que los origino."""
+    with open(ruta, encoding="utf-8") as fh:
+        textos = json.load(fh)
+    porclave = {k: f for k, _, f in pendientes}
+    puestos, rechazados = 0, 0
+    for k, texto in textos.items():
+        texto = (texto or "").strip()
+        if k not in porclave:
+            print("  [!] %-26s no estaba pendiente, se ignora" % k)
+            rechazados += 1
+            continue
+        if not texto:
+            print("  [!] %-26s texto vacio" % k)
+            rechazados += 1
+            continue
+        n = oraciones(texto)
+        if n > MAX_ORACIONES:
+            print("  [!] %-26s %d oraciones, el maximo es %d"
+                  % (k, n, MAX_ORACIONES))
+            rechazados += 1
+            continue
+        cache[k] = {"firma": porclave[k], "texto": texto,
+                    "modelo": "redaccion propia",
+                    "generado": datetime.now().strftime("%Y-%m-%d %H:%M")}
+        puestos += 1
+        print("  OK %-26s %d oraciones, %d caracteres" % (k, n, len(texto)))
+    faltan = [k for k, _, _ in pendientes if k not in textos]
+    if faltan:
+        print("\n  Siguen sin conclusion: " + ", ".join(faltan[:8])
+              + (" y %d mas" % (len(faltan) - 8) if len(faltan) > 8 else ""))
+    return puestos, rechazados
+
+
 def pedir(cliente, modelo, r):
     msg = cliente.messages.create(
         model=modelo,
@@ -197,11 +242,47 @@ def pedir(cliente, modelo, r):
     return " ".join(b.text for b in msg.content if b.type == "text").strip()
 
 
+def por_api(cache, pendientes, modelo):
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        print("\n[!] No esta definida ANTHROPIC_API_KEY, no se genera nada.")
+        print("    Las conclusiones que ya estaban siguen publicandose.")
+        print("    En PowerShell:  $env:ANTHROPIC_API_KEY = 'sk-ant-...'")
+        raise SystemExit(1)
+    try:
+        import anthropic
+    except ImportError:
+        raise SystemExit("Falta el SDK: pip install anthropic")
+    cliente = anthropic.Anthropic()
+    hechas, fallidas = 0, 0
+    for k, r, f in pendientes:
+        try:
+            texto = pedir(cliente, modelo, r)
+        except Exception as e:
+            # Se conserva lo que hubiera de antes: un fallo de red no tiene por
+            # que dejar el panel vacio.
+            fallidas += 1
+            print("  [!] %-26s %s" % (k, e))
+            continue
+        cache[k] = {"firma": f, "texto": texto, "modelo": modelo,
+                    "generado": datetime.now().strftime("%Y-%m-%d %H:%M")}
+        hechas += 1
+        print("  OK %-26s %d caracteres" % (k, len(texto)))
+    return hechas, fallidas
+
+
+def guardar(cache):
+    with open(SALIDA, "w", encoding="utf-8") as fh:
+        json.dump({"conclusiones": dict(sorted(cache.items())),
+                   "generado": datetime.now().strftime("%Y-%m-%d %H:%M")},
+                  fh, ensure_ascii=False, indent=1)
+    print("-> %s (%d conclusiones)" % (SALIDA, len(cache)))
+    print("Ahora corre: python procesar_tbm.py   (para regenerar index.html)")
+
+
 def main():
-    todo = "--todo" in sys.argv
-    modelo = MODELO
-    if "--modelo" in sys.argv:
-        modelo = sys.argv[sys.argv.index("--modelo") + 1]
+    args = sys.argv[1:]
+    todo = "--todo" in args
+    modelo = args[args.index("--modelo") + 1] if "--modelo" in args else MODELO
 
     if not os.path.exists(HISTORICO):
         raise SystemExit("Falta datos/historico.json: corre primero procesar_tbm.py")
@@ -217,56 +298,44 @@ def main():
         with open(SALIDA, encoding="utf-8") as fh:
             cache = json.load(fh).get("conclusiones", {})
 
-    pendientes = []
+    total, pendientes = 0, []
     for clave in sorted(historico):
         for seg in ("tractores", "cosechadoras"):
             r = resumen(historico, ind, clave, seg)
             if r is None:
                 continue          # el informe no trae ese segmento ese mes
+            total += 1
             k, f = clave + "|" + seg, firma(r)
             if cache.get(k, {}).get("firma") == f:
-                continue          # el resumen no cambio: se reusa el texto
+                continue          # el resumen no cambio: el texto sigue valiendo
             pendientes.append((k, r, f))
 
-    print("%d combinaciones en el historico, %d para generar"
-          % (len(cache) + len(pendientes), len(pendientes)))
+    print("%d combinaciones, %d sin conclusion al dia" % (total, len(pendientes)))
+
+    if "--cargar" in args:
+        puestos, rechazados = cargar_textos(
+            cache, pendientes, args[args.index("--cargar") + 1])
+        print("\n%d cargadas, %d rechazadas" % (puestos, rechazados))
+        guardar(cache)
+        return
+
     if not pendientes:
         print("Nada cambio, el cache esta al dia.")
         return
 
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("\n[!] No esta definida ANTHROPIC_API_KEY, no se genera nada.")
-        print("    Las conclusiones que ya estaban siguen publicandose.")
-        print("    En PowerShell:  $env:ANTHROPIC_API_KEY = 'sk-ant-...'")
-        raise SystemExit(1)
-    try:
-        import anthropic
-    except ImportError:
-        raise SystemExit("Falta el SDK: pip install anthropic")
+    if "--api" in args:
+        hechas, fallidas = por_api(cache, pendientes, modelo)
+        print("\n%d generadas, %d con error" % (hechas, fallidas))
+        guardar(cache)
+        return
 
-    cliente = anthropic.Anthropic()
-    hechas, fallidas = 0, 0
-    for k, r, f in pendientes:
-        try:
-            texto = pedir(cliente, modelo, r)
-        except Exception as e:
-            fallidas += 1
-            # Se conserva lo que hubiera de antes: un fallo de red no tiene por
-            # que dejar el panel vacio.
-            print("  [!] %-24s %s" % (k, e))
-            continue
-        cache[k] = {"firma": f, "texto": texto, "modelo": modelo,
-                    "generado": datetime.now().strftime("%Y-%m-%d %H:%M")}
-        hechas += 1
-        print("  OK %-24s %d caracteres" % (k, len(texto)))
-
-    with open(SALIDA, "w", encoding="utf-8") as fh:
-        json.dump({"conclusiones": dict(sorted(cache.items())),
-                   "modelo": modelo,
-                   "generado": datetime.now().strftime("%Y-%m-%d %H:%M")},
+    # Modo por defecto: volcar los resumenes para escribir los textos a mano.
+    with open(PENDIENTES, "w", encoding="utf-8") as fh:
+        json.dump({k: {"firma": f, "resumen": r} for k, r, f in pendientes},
                   fh, ensure_ascii=False, indent=1)
-    print("\n%d generadas, %d con error -> %s" % (hechas, fallidas, SALIDA))
-    print("Ahora corre: python procesar_tbm.py   (para regenerar index.html)")
+    print("\n-> %s" % PENDIENTES)
+    print('Escribi los textos en un JSON {"clave|segmento": "texto"} y corre:')
+    print("    python conclusiones.py --cargar <ese archivo>")
 
 
 if __name__ == "__main__":

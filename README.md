@@ -276,34 +276,49 @@ se normaliza a una clave canónica, en lugar de asumir columnas fijas.
 ## Panel de conclusión
 
 Debajo de las tablas hay un panel con una conclusión de hasta 5 oraciones sobre
-el mes y el segmento que estén seleccionados. La escribe `conclusiones.py`
-**al generar la página**, no el navegador: el dashboard es un HTML estático
-servido por GitHub Pages y no hay nada corriendo del lado del servidor.
+el mes y el segmento seleccionados. Se escribe **al generar la página**, no en
+el navegador: el dashboard es un HTML estático servido por GitHub Pages y no hay
+nada corriendo del lado del servidor. El texto queda embebido en `index.html`,
+así que el panel aparece instantáneo y anda sin conexión.
 
-Esto se eligió así por tres razones concretas:
+El filtro de la tabla es mes × segmento: **44 combinaciones** y 2 nuevas por mes.
+El cache va por hash del resumen, así que una combinación que no cambió no se
+vuelve a pedir.
 
-- la API key nunca sale de la máquina que genera el HTML, y el repo es público;
-- el panel aparece instantáneo, sin spinner ni espera en cada cambio de filtro;
-- la página sigue funcionando sin conexión.
-
-El filtro de la tabla es mes × segmento, o sea **44 combinaciones** en total y 2
-nuevas por mes. El cache va por hash del resumen: si el resumen de una
-combinación no cambió, se reusa el texto guardado. Un mes normal son 2 llamadas.
-
-Al modelo no se le manda la tabla, se le manda el resumen que arma `resumen()`:
-totales de FYTD y LFYTD, variación interanual, market share, top 3 de bandas de
-potencia con mínimo/máximo/promedio, y las retenciones y el dólar del mes. Son
-unos 350 tokens.
+`conclusiones.py` **no llama a ninguna API y no necesita ninguna clave**. Vuelca
+los resúmenes pendientes y después carga los textos escritos:
 
 ```bash
-$env:ANTHROPIC_API_KEY = "sk-ant-..."   # PowerShell
-python conclusiones.py                   # solo lo que falte o haya cambiado
-python conclusiones.py --todo            # ignora el cache y regenera las 44
+python conclusiones.py                       # vuelca _pendientes.json
+python conclusiones.py --cargar textos.json  # {"2026-08|tractores": "..."}
 ```
 
-Si no hay key, si falla la API o si todavía no se generó la conclusión de un
-filtro, el bloque entero se oculta y la página funciona igual. Cuando el informe
-no trae un segmento ese mes, el panel lo dice en vez de quedar vacío.
+El archivo de textos es un JSON plano de `clave|segmento` a texto. Al cargar se
+rechaza lo que pase de 5 oraciones, lo que venga vacío y lo que no estuviera
+pendiente, y a cada texto se le guarda la firma del resumen que lo originó.
+
+Al escribirlos se mira solo el resumen que arma `resumen()`: totales de FYTD y
+LFYTD, variación interanual, market share, top 3 de bandas de potencia con
+mínimo/máximo/promedio, y las retenciones y el dólar del mes. Nunca se citan
+números que no estén ahí.
+
+Si todavía no hay conclusión para un filtro, **el bloque entero se oculta** y la
+página funciona igual. Cuando el informe no trae un segmento ese mes, el panel
+lo dice en vez de quedar vacío.
+
+### Si alguna vez se quiere en vivo
+
+`conclusiones.py --api` llama a la API de Anthropic y necesita `ANTHROPIC_API_KEY`
+en el entorno. No hace falta para el uso normal: está como base por si se arma
+un panel en vivo, que es la única forma de que la conclusión refleje también los
+filtros del gráfico y no solo mes × segmento.
+
+Eso **no se puede hacer desde la página**: cualquier cosa que el navegador pueda
+llamar la puede leer cualquiera que abra `index.html`, y el repo es público.
+Haría falta un proxy (por ejemplo un Cloudflare Worker) que guarde la clave del
+lado del servidor. Dos cosas a tener en cuenta: el endpoint queda público y sin
+rate limit cualquiera puede gastar el crédito, y la clave pasa a vivir en el
+almacén de secretos del proxy, nunca en git.
 
 ## Requisitos
 
