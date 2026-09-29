@@ -230,6 +230,8 @@ otro informe así, se agrega ahí siguiendo el mismo formato.
 |---|---|
 | `procesar_tbm.py` | Lee los PDF, valida y genera el HTML |
 | `indicadores.py` | Baja tasas y crédito del BCRA |
+| `conclusiones.py` | Escribe la conclusión de cada mes × segmento |
+| `datos/conclusiones.json` | **Generado.** Conclusiones cacheadas por hash |
 | `datos/eventos.json` | Cambios de retenciones, curados con fuente |
 | `datos/indicadores.json` | **Generado.** Series mensualizadas |
 | `plantilla.html` | Diseño del dashboard (editar acá, no en `index.html`) |
@@ -271,8 +273,40 @@ límites de clase se movieron con los años (`Pg7 272 < 319` en 2024,
 `Pg7 272<320` en 2026). Por eso el encabezado de cada tabla se lee de verdad y
 se normaliza a una clave canónica, en lugar de asumir columnas fijas.
 
+## Panel de conclusión
+
+Debajo de las tablas hay un panel con una conclusión de hasta 5 oraciones sobre
+el mes y el segmento que estén seleccionados. La escribe `conclusiones.py`
+**al generar la página**, no el navegador: el dashboard es un HTML estático
+servido por GitHub Pages y no hay nada corriendo del lado del servidor.
+
+Esto se eligió así por tres razones concretas:
+
+- la API key nunca sale de la máquina que genera el HTML, y el repo es público;
+- el panel aparece instantáneo, sin spinner ni espera en cada cambio de filtro;
+- la página sigue funcionando sin conexión.
+
+El filtro de la tabla es mes × segmento, o sea **44 combinaciones** en total y 2
+nuevas por mes. El cache va por hash del resumen: si el resumen de una
+combinación no cambió, se reusa el texto guardado. Un mes normal son 2 llamadas.
+
+Al modelo no se le manda la tabla, se le manda el resumen que arma `resumen()`:
+totales de FYTD y LFYTD, variación interanual, market share, top 3 de bandas de
+potencia con mínimo/máximo/promedio, y las retenciones y el dólar del mes. Son
+unos 350 tokens.
+
+```bash
+$env:ANTHROPIC_API_KEY = "sk-ant-..."   # PowerShell
+python conclusiones.py                   # solo lo que falte o haya cambiado
+python conclusiones.py --todo            # ignora el cache y regenera las 44
+```
+
+Si no hay key, si falla la API o si todavía no se generó la conclusión de un
+filtro, el bloque entero se oculta y la página funciona igual. Cuando el informe
+no trae un segmento ese mes, el panel lo dice en vez de quedar vacío.
+
 ## Requisitos
 
 ```bash
-pip install pdfplumber
+pip install -r requirements.txt
 ```

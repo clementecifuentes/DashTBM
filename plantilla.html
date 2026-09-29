@@ -205,6 +205,12 @@ td.marca.col-hover,th.marca.col-hover{background:var(--amarillo)!important}
 /* ---------- grafico ---------- */
 .panel{background:var(--sup);border:1px solid var(--line);border-radius:8px;
   box-shadow:var(--sombra);padding:16px 18px 12px}
+.concl{border-left:3px solid var(--jd);padding:14px 18px 12px}
+.concl p{margin:0;font-size:.84rem;line-height:1.66;max-width:80ch;
+  animation:subeNumero .42s cubic-bezier(.22,.7,.3,1) both}
+.concl .pie-concl{margin-top:9px;font-size:.68rem;color:var(--ink-3);
+  letter-spacing:.02em}
+.concl .vacio{color:var(--ink-3);font-size:.8rem}
 .chart-tit{font-size:.86rem;font-weight:650;margin-bottom:2px}
 .chart-sub{font-size:.75rem;color:var(--ink-3);margin-bottom:8px}
 .chart-hold{position:relative}
@@ -368,6 +374,10 @@ footer{margin-top:52px;padding-top:15px;border-top:1px solid var(--line);
       </div>
     </div>
     <div id="tablas"></div>
+    <div id="blq-conclusion" hidden>
+      <div class="tit-tabla">Conclusión</div>
+      <div class="panel concl" id="conclusion"></div>
+    </div>
   </section>
 
   <section>
@@ -503,6 +513,41 @@ function pintarTablas(){
     th.onclick = function(){
       S.col = (S.col===th.dataset.col) ? null : th.dataset.col; pintarTablas(); };
   });
+  pintarConclusion();
+}
+
+/* ==================== conclusion ==================== */
+/* Las conclusiones las escribe conclusiones.py al generar la pagina, una por
+   mes x segmento, y vienen embebidas en APP.conclusiones. Aca no hay llamada a
+   ninguna API: por eso el panel es instantaneo y no necesita spinner. */
+function pintarConclusion(){
+  const cont = document.getElementById("conclusion");
+  if(!cont) return;
+  const mes = APP.meses[S.clave];
+  const seg = SEG_ES[S.seg];
+  const hay = !!mes.segmentos[S.seg];
+  const c = (APP.conclusiones || {})[S.clave+"|"+S.seg];
+
+  const blq = document.getElementById("blq-conclusion");
+  if(!hay){
+    // El informe no trae ese segmento ese mes: lo dice, porque la tabla de
+    // arriba tambien esta vacia y el panel en blanco se leeria como un error.
+    blq.hidden = false;
+    cont.innerHTML = '<div class="vacio">El informe de '+esc(mes.mes_es)
+      +' no trae datos de '+esc(seg)+'.</div>';
+    return;
+  }
+  if(!(c && c.texto)){
+    // Sin conclusion generada el bloque entero desaparece. Es una lectura del
+    // informe, no un dato: mejor que no este que mostrarle al que mira la
+    // pagina un cartel pidiendo correr un script.
+    blq.hidden = true;
+    cont.innerHTML = "";
+    return;
+  }
+  blq.hidden = false;
+  cont.innerHTML = '<p>'+esc(c.texto)+'</p><div class="pie-concl">'
+    + esc(mes.mes_es)+' · '+esc(seg)+' · generada con '+esc(c.modelo)+'</div>';
 }
 
 /* ==================== serie mensual ==================== */

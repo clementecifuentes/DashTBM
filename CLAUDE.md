@@ -13,8 +13,13 @@ Un único PDF nuevo. Todo el resto del trabajo es mecánico:
 
 ```bash
 python indicadores.py      # dólar y retenciones al día
+python conclusiones.py     # conclusión del mes nuevo (necesita ANTHROPIC_API_KEY)
 python procesar_tbm.py     # relee todos los PDF y regenera index.html
 ```
+
+`conclusiones.py` va **antes** de `procesar_tbm.py`, porque este último embebe en
+el HTML lo que aquél deja en `datos/conclusiones.json`. Si no hay key definida,
+avisa y no toca nada: se siguen publicando las conclusiones que ya estaban.
 
 `procesar_tbm.py` sin argumentos relee todo `datos/*.pdf`. Con un archivo suelto
 como argumento procesa solo ese y lo **mezcla** con el histórico existente, no
@@ -32,6 +37,9 @@ haberse movido.
 - El diseño se edita en `plantilla.html`. `index.html` es **generado**: cualquier
   cambio hecho ahí se pierde en el próximo procesamiento.
 - `estable.html` es una copia congelada que sirve de referencia. No se regenera.
+- El panel de conclusión se **oculta solo** si no hay texto generado para ese
+  mes y segmento. Nunca mostrarle al que visita la página un cartel pidiendo
+  correr un script, ni meter ese faltante en `avisar()`: los avisos se publican.
 - No agregar indicadores, tarjetas ni secciones que no estén pedidas. La página
   ya se rediseñó dos veces por estar sobrecargada de datos.
 
