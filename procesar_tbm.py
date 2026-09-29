@@ -42,7 +42,6 @@ DIR_DATOS = os.path.join(BASE, "datos")
 DIR_MANUAL = os.path.join(DIR_DATOS, "manual")
 HISTORICO = os.path.join(DIR_DATOS, "historico.json")
 INDICADORES = os.path.join(DIR_DATOS, "indicadores.json")
-CONCLUSIONES = os.path.join(DIR_DATOS, "conclusiones.json")
 PLANTILLA = os.path.join(BASE, "plantilla.html")
 SALIDA = os.path.join(BASE, "index.html")
 
@@ -527,30 +526,14 @@ def main():
     else:
         avisar("no hay datos/indicadores.json; correr indicadores.py")
 
-    # Conclusiones por mes x segmento, escritas por conclusiones.py. Si faltan,
-    # el panel lo dice y la pagina funciona igual: no es un dato del informe.
-    conclusiones = {}
-    if os.path.exists(CONCLUSIONES):
-        with open(CONCLUSIONES, encoding="utf-8") as fh:
-            conclusiones = json.load(fh).get("conclusiones", {})
-        faltantes = [c + "|" + g for c in historico
-                     for g in ("tractores", "cosechadoras")
-                     if historico[c]["segmentos"].get(g) and
-                     (c + "|" + g) not in conclusiones]
-        if faltantes:
-            # print y no avisar(): los avisos se publican en la pagina, y que
-            # falte una conclusion es un recordatorio para el que genera, no
-            # algo que tenga que ver el que mira el dashboard.
-            print("  (%d combinaciones sin conclusion; correr conclusiones.py)"
-                  % len(faltantes))
-    else:
-        print("  (sin datos/conclusiones.json; correr conclusiones.py)")
-
+    # datos/conclusiones.json ya no se embebe: la conclusion que muestra la
+    # pagina se calcula en el navegador sobre el periodo de la ficha, que puede
+    # ser cualquier rango. El archivo queda igual, con las 44 redactadas por
+    # mes x segmento, porque es la base del panel en vivo que quedo pendiente.
     payload = {
         "meses": historico,
         "series": serie_mensual(historico),
         "indicadores": indicadores,
-        "conclusiones": conclusiones,
         "generado": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "avisos": AVISOS,
     }

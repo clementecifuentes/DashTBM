@@ -43,9 +43,12 @@ haberse movido.
 - El diseño se edita en `plantilla.html`. `index.html` es **generado**: cualquier
   cambio hecho ahí se pierde en el próximo procesamiento.
 - `estable.html` es una copia congelada que sirve de referencia. No se regenera.
-- El panel de conclusión se **oculta solo** si no hay texto generado para ese
-  mes y segmento. Nunca mostrarle al que visita la página un cartel pidiendo
-  correr un script, ni meter ese faltante en `avisar()`: los avisos se publican.
+- El panel de conclusión va **a la derecha de la ficha** y se calcula en el
+  navegador (`puntosFicha`), con los números que `cifras()` ya computó para el
+  cuadro. Nunca recalcular por separado: si los dos hicieran la cuenta por su
+  lado podrían mostrar cifras distintas. Máximo 4 puntos.
+- Nunca mostrarle al que visita la página un cartel pidiendo correr un script,
+  ni meter ese tipo de faltante en `avisar()`: los avisos se publican.
 - No agregar indicadores, tarjetas ni secciones que no estén pedidas. La página
   ya se rediseñó dos veces por estar sobrecargada de datos.
 

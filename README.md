@@ -275,50 +275,48 @@ se normaliza a una clave canónica, en lugar de asumir columnas fijas.
 
 ## Panel de conclusión
 
-Debajo de las tablas hay un panel con una conclusión de hasta 5 oraciones sobre
-el mes y el segmento seleccionados. Se escribe **al generar la página**, no en
-el navegador: el dashboard es un HTML estático servido por GitHub Pages y no hay
-nada corriendo del lado del servidor. El texto queda embebido en `index.html`,
-así que el panel aparece instantáneo y anda sin conexión.
+A la derecha de la ficha de cabecera hay un bloque con **3 o 4 puntos** sobre el
+mismo período y segmento que muestra el cuadro. Se calculan en el navegador con
+los mismos números que la ficha ya tiene, así que:
 
-El filtro de la tabla es mes × segmento: **44 combinaciones** y 2 nuevas por mes.
-El cache va por hash del resumen, así que una combinación que no cambió no se
-vuelve a pedir.
+- valen para **cualquiera** de los 253 rangos de fechas por segmento, no solo
+  para combinaciones previstas;
+- **no pueden contradecir al cuadro**, porque salen de la misma cuenta, hecha
+  una sola vez en `cifras()` y usada para las dos cosas;
+- no hay modelo, ni clave, ni espera.
 
-`conclusiones.py` **no llama a ninguna API y no necesita ninguna clave**. Vuelca
-los resúmenes pendientes y después carga los textos escritos:
+Los puntos son, en orden: el concesionario contra la industria de su zona, el
+market share del AOR, la industria a nivel país, y la participación nacional
+cuando aporta algo. Los que no tienen datos se omiten, por eso a veces son 3 y
+no 4. En los meses sin año anterior se muestran niveles en vez de variaciones.
+
+Está verificado sobre **las 506 combinaciones** (253 rangos × 2 segmentos): en
+todas, cada cifra de los puntos aparece en la ficha, y ninguna genera más de 4.
+
+### Las 44 conclusiones escritas
+
+`conclusiones.py` y `datos/conclusiones.json` siguen en el repo, con una
+conclusión redactada por mes × segmento, pero **ya no se embeben en la página**:
+la ficha manda un rango de fechas y esas están indexadas por mes suelto. Quedan
+como base del panel en vivo que está pendiente.
 
 ```bash
 python conclusiones.py                       # vuelca _pendientes.json
 python conclusiones.py --cargar textos.json  # {"2026-08|tractores": "..."}
 ```
 
-El archivo de textos es un JSON plano de `clave|segmento` a texto. Al cargar se
-rechaza lo que pase de 5 oraciones, lo que venga vacío y lo que no estuviera
-pendiente, y a cada texto se le guarda la firma del resumen que lo originó.
+### Si alguna vez se quiere prosa en vivo
 
-Al escribirlos se mira solo el resumen que arma `resumen()`: totales de FYTD y
-LFYTD, variación interanual, market share, top 3 de bandas de potencia con
-mínimo/máximo/promedio, y las retenciones y el dólar del mes. Nunca se citan
-números que no estén ahí.
-
-Si todavía no hay conclusión para un filtro, **el bloque entero se oculta** y la
-página funciona igual. Cuando el informe no trae un segmento ese mes, el panel
-lo dice en vez de quedar vacío.
-
-### Si alguna vez se quiere en vivo
-
-`conclusiones.py --api` llama a la API de Anthropic y necesita `ANTHROPIC_API_KEY`
-en el entorno. No hace falta para el uso normal: está como base por si se arma
-un panel en vivo, que es la única forma de que la conclusión refleje también los
-filtros del gráfico y no solo mes × segmento.
+`conclusiones.py --api` llama a la API de Anthropic y necesita
+`ANTHROPIC_API_KEY`. No se usa. Está como base por si se arma un panel que
+escriba prosa para cualquier estado, incluidos los filtros del gráfico.
 
 Eso **no se puede hacer desde la página**: cualquier cosa que el navegador pueda
 llamar la puede leer cualquiera que abra `index.html`, y el repo es público.
 Haría falta un proxy (por ejemplo un Cloudflare Worker) que guarde la clave del
-lado del servidor. Dos cosas a tener en cuenta: el endpoint queda público y sin
-rate limit cualquiera puede gastar el crédito, y la clave pasa a vivir en el
-almacén de secretos del proxy, nunca en git.
+lado del servidor. Dos advertencias: el endpoint queda público y sin rate limit
+cualquiera puede gastar el crédito, y la clave pasa a vivir en el almacén de
+secretos del proxy, nunca en git.
 
 ## Requisitos
 

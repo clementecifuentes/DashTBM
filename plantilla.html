@@ -146,7 +146,24 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--jd);outline-of
 
 /* ---------- tablas ---------- */
 /* ---------- fichas de cabecera ---------- */
-.fichas{max-width:780px;margin:26px 0 4px}
+/* La ficha mantiene su ancho y la conclusion ocupa el hueco que quedaba libre
+   a su derecha. Ancho fijo y no minmax(0,780px): esa variante ya nos colapso
+   una columna a cero. Abajo de 1100px se apilan. */
+.fichas{display:grid;grid-template-columns:780px 1fr;gap:18px;
+  align-items:start;margin:26px 0 4px}
+@media (max-width:1100px){ .fichas{grid-template-columns:1fr} }
+.ficha-concl{background:var(--sup);border:1px solid var(--line);border-radius:8px;
+  box-shadow:var(--sombra);border-top:3px solid var(--amarillo);
+  padding:11px 16px 13px}
+.ficha-concl h4{margin:0 0 7px;font-size:.7rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.09em;color:var(--ink-3)}
+.ficha-concl ul{margin:0;padding-left:17px}
+.ficha-concl li{font-size:.78rem;line-height:1.5;margin:8px 0;color:var(--ink-2);
+  animation:subeNumero .42s cubic-bezier(.22,.7,.3,1) both}
+.ficha-concl li:nth-child(2){animation-delay:.05s}
+.ficha-concl li:nth-child(3){animation-delay:.1s}
+.ficha-concl li:nth-child(4){animation-delay:.15s}
+.ficha-concl li b{color:var(--ink);font-weight:650}
 .ficha{background:var(--sup);border:1px solid var(--line);border-radius:8px;
   box-shadow:var(--sombra);border-top:3px solid var(--jd);overflow:hidden}
 .ficha.cos{border-top-color:#c96a2e}
@@ -205,12 +222,6 @@ td.marca.col-hover,th.marca.col-hover{background:var(--amarillo)!important}
 /* ---------- grafico ---------- */
 .panel{background:var(--sup);border:1px solid var(--line);border-radius:8px;
   box-shadow:var(--sombra);padding:16px 18px 12px}
-.concl{border-left:3px solid var(--jd);padding:14px 18px 12px}
-.concl p{margin:0;font-size:.84rem;line-height:1.66;max-width:80ch;
-  animation:subeNumero .42s cubic-bezier(.22,.7,.3,1) both}
-.concl .pie-concl{margin-top:9px;font-size:.68rem;color:var(--ink-3);
-  letter-spacing:.02em}
-.concl .vacio{color:var(--ink-3);font-size:.8rem}
 .chart-tit{font-size:.86rem;font-weight:650;margin-bottom:2px}
 .chart-sub{font-size:.75rem;color:var(--ink-3);margin-bottom:8px}
 .chart-hold{position:relative}
@@ -374,10 +385,6 @@ footer{margin-top:52px;padding-top:15px;border-top:1px solid var(--line);
       </div>
     </div>
     <div id="tablas"></div>
-    <div id="blq-conclusion" hidden>
-      <div class="tit-tabla">Conclusión</div>
-      <div class="panel concl" id="conclusion"></div>
-    </div>
   </section>
 
   <section>
@@ -513,41 +520,72 @@ function pintarTablas(){
     th.onclick = function(){
       S.col = (S.col===th.dataset.col) ? null : th.dataset.col; pintarTablas(); };
   });
-  pintarConclusion();
 }
 
-/* ==================== conclusion ==================== */
-/* Las conclusiones las escribe conclusiones.py al generar la pagina, una por
-   mes x segmento, y vienen embebidas en APP.conclusiones. Aca no hay llamada a
-   ninguna API: por eso el panel es instantaneo y no necesita spinner. */
-function pintarConclusion(){
-  const cont = document.getElementById("conclusion");
-  if(!cont) return;
-  const mes = APP.meses[S.clave];
-  const seg = SEG_ES[S.seg];
-  const hay = !!mes.segmentos[S.seg];
-  const c = (APP.conclusiones || {})[S.clave+"|"+S.seg];
+/* ==================== conclusion de la ficha ====================
+   Tres o cuatro puntos sobre el mismo periodo y segmento que muestra la ficha.
+   Se calculan aca con los numeros que la ficha ya tiene, asi que valen para
+   cualquier rango de fechas y nunca pueden decir algo distinto del cuadro.
+   No hay modelo ni llamada a ninguna API. */
+function puntosFicha(d, dealerNom){
+  const P = [];
+  const fuerte = function(t){ return '<b>'+t+'</b>'; };
+  const pc = function(a, b){ return varPc(a, b); };
+  // Una variacion que redondea a cero no "crecio 0,0%": quedo igual.
+  const nulo = function(v){ return Math.abs(v) < 0.05; };
+  const mov = function(v){ return v>=0 ? "creció" : "cayó"; };
+  const movS = function(v){ return v>=0 ? "subió" : "bajó"; };
+  const abs1 = function(v){ return num(Math.abs(v), 1)+"%"; };
+  const var1 = function(v){ return nulo(v) ? "quedó igual" : mov(v)+" "+abs1(v); };
 
-  const blq = document.getElementById("blq-conclusion");
-  if(!hay){
-    // El informe no trae ese segmento ese mes: lo dice, porque la tabla de
-    // arriba tambien esta vacia y el panel en blanco se leeria como un error.
-    blq.hidden = false;
-    cont.innerHTML = '<div class="vacio">El informe de '+esc(mes.mes_es)
-      +' no trae datos de '+esc(seg)+'.</div>';
-    return;
+  const a = d.AOR, p = d.PAIS;
+  const vdA = pc(a.dA, a.dB), viA = pc(a.iA, a.iB), viP = pc(p.iA, p.iB);
+
+  // 1) El dealer contra su propia zona: es la comparacion que importa.
+  if(vdA!=null && viA!=null){
+    const juntos = nulo(vdA) || nulo(viA) || (vdA>=0) === (viA>=0);
+    P.push(esc(dealerNom)+" "
+      + (nulo(vdA) ? "quedó igual" : mov(vdA)+" "+fuerte(abs1(vdA)))
+      + (juntos ? " y la industria de su AOR " : " mientras la industria de su AOR ")
+      + var1(viA));
+  }else if(a.dA!=null){
+    // Sin periodo anterior no hay variacion: se muestran los niveles, y el
+    // del dealer se acompaña con el de su zona para que signifique algo.
+    P.push(esc(dealerNom)+" vendió "+fuerte(uni(a.dA))+" unidades en el AOR"
+      + (a.iA!=null ? ", sobre "+uni(a.iA)+" de la industria" : ""));
   }
-  if(!(c && c.texto)){
-    // Sin conclusion generada el bloque entero desaparece. Es una lectura del
-    // informe, no un dato: mejor que no este que mostrarle al que mira la
-    // pagina un cartel pidiendo correr un script.
-    blq.hidden = true;
-    cont.innerHTML = "";
-    return;
+
+  // 2) Share del AOR, que resume las dos lineas anteriores en un solo numero.
+  // Si no vendio nada en el periodo el share es 0 y no aporta: el primer punto
+  // ya lo dijo. Y un delta que redondea a cero es "se mantuvo", no "subio 0,0".
+  if(a.sA!=null && !(a.sA===0 && (a.sB==null || a.sB===0))){
+    if(a.sB==null)
+      P.push("El market share del AOR es "+fuerte(num(a.sA,1)+"%"));
+    else if(Math.abs(a.sA-a.sB) < 0.05)
+      P.push("El market share del AOR se mantuvo en "+fuerte(num(a.sA,1)+"%"));
+    else
+      P.push("El market share del AOR "+movS(a.sA-a.sB)+" "
+        + fuerte(num(Math.abs(a.sA-a.sB),1)+" pp")+", hasta "+num(a.sA,1)+"%");
   }
-  blq.hidden = false;
-  cont.innerHTML = '<p>'+esc(c.texto)+'</p><div class="pie-concl">'
-    + esc(mes.mes_es)+' · '+esc(seg)+' · generada con '+esc(c.modelo)+'</div>';
+
+  // 3) El pais, y si se puede, contra lo que paso en la zona.
+  if(viP!=null){
+    let t = "A nivel país la industria "
+      + (nulo(viP) ? "quedó igual" : mov(viP)+" "+fuerte(abs1(viP)));
+    if(viA!=null && !nulo(viP) && Math.abs(Math.abs(viP)-Math.abs(viA))>=3)
+      t += (Math.abs(viP)>Math.abs(viA) ? ", bastante más que en la zona"
+                                        : ", menos que en la zona");
+    P.push(t);
+  }else if(p.iA!=null){
+    P.push("La industria del país vendió "+fuerte(uni(p.iA))+" unidades");
+  }
+
+  // 4) Participacion nacional, solo si aporta algo mas que repetir el share.
+  if(p.sA && p.sB!=null && Math.abs(p.sA-p.sB)>=0.05){
+    P.push("La participación nacional "+movS(p.sA-p.sB)+" "
+      + fuerte(num(Math.abs(p.sA-p.sB),1)+" pp")+", hasta "+num(p.sA,1)+"%");
+  }
+  return P.slice(0, 4);
 }
 
 /* ==================== serie mensual ==================== */
@@ -1129,17 +1167,25 @@ function pintarFichas(){
       + '</div>';
   };
 
-  const ambito = function(col, et){
+  // Los numeros se calculan una sola vez y se usan para las dos cosas: las
+  // lineas de la ficha y los puntos de la conclusion. Asi no pueden diferir.
+  const cifras = function(col){
     const iA = sumaPeriodo(seg, claves, "industria", col);
     const dA = sumaPeriodo(seg, claves, "dealer", col);
     const iB = hayAnt ? sumaPeriodo(seg, clavesAnt, "industria", col) : null;
     const dB = hayAnt ? sumaPeriodo(seg, clavesAnt, "dealer", col) : null;
-    const sA = (iA && dA!=null) ? dA/iA*100 : null;
-    const sB = (iB && dB!=null) ? dB/iB*100 : null;
+    return {iA:iA, dA:dA, iB:iB, dB:dB,
+            sA:(iA && dA!=null) ? dA/iA*100 : null,
+            sB:(iB && dB!=null) ? dB/iB*100 : null};
+  };
+  const D = {AOR: cifras("AOR"), PAIS: cifras("PAIS")};
+
+  const ambito = function(col, et){
+    const c = D[col];
     return '<div class="ambito"><h4>'+esc(et)+'</h4>'
-      + linea("Industria", iA, iB, false)
-      + linea(dealerNom,   dA, dB, false)
-      + linea("Market share", sA, sB, true)
+      + linea("Industria", c.iA, c.iB, false)
+      + linea(dealerNom,   c.dA, c.dB, false)
+      + linea("Market share", c.sA, c.sB, true)
       + '</div>';
   };
 
@@ -1149,6 +1195,8 @@ function pintarFichas(){
     }).join("");
   };
 
+  const P = puntosFicha(D, dealerNom);
+
   cont.innerHTML = '<div class="ficha '+(seg==="cosechadoras"?"cos":"")+'">'
     + '<div class="ficha-cab"><b>'+SEG_ES[seg]+'</b>'
       + '<span class="ficha-per">de <select id="f-desde">'+ops(S.fDesde)+'</select>'
@@ -1156,7 +1204,10 @@ function pintarFichas(){
       + '<span class="ficha-vs">'+esc(etAct)+(etAnt ? ' vs '+esc(etAnt) : ' · sin período anterior')+'</span>'
     + '</div>'
     + '<div class="ficha-cuerpo">'+ambito("AOR","AOR")+ambito("PAIS","País")+'</div>'
-    + '</div>';
+    + '</div>'
+    + (P.length ? '<div class="ficha-concl"><h4>Conclusión</h4><ul>'
+        + P.map(function(t){ return '<li>'+t+'</li>'; }).join("")
+        + '</ul></div>' : '');
 
   const dd = document.getElementById("f-desde"), hh = document.getElementById("f-hasta");
   dd.onchange = function(){ S.fDesde = dd.value;
