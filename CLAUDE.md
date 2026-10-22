@@ -13,19 +13,19 @@ Un único PDF nuevo. Todo el resto del trabajo es mecánico:
 
 ```bash
 python indicadores.py      # dólar y retenciones al día
-python conclusiones.py     # vuelca los resúmenes de los filtros sin conclusión
 python procesar_tbm.py     # relee todos los PDF y regenera index.html
 ```
 
-`conclusiones.py` va **antes** de `procesar_tbm.py`, porque este último embebe en
-el HTML lo que aquél deja en `datos/conclusiones.json`.
+Eso es todo. **El panel de conclusión no entra en el flujo mensual**: se calcula
+en el navegador sobre lo que ya está embebido, así que se actualiza solo con el
+mes nuevo. No hay que correr nada para eso.
 
-Las conclusiones **las escribo yo en la conversación, no una API**: el script
-vuelca en `_pendientes.json` los resúmenes de las combinaciones que faltan (2 en
-un mes normal), se escriben los textos en un JSON `{"2026-08|tractores": "..."}`
-y se cargan con `python conclusiones.py --cargar <archivo>`. Máximo 5 oraciones
-y **solo números que estén en el resumen**; conviene verificarlo por máquina
-antes de cargar. Existe `--api`, que sí usa `ANTHROPIC_API_KEY`, pero no se usa.
+`conclusiones.py` y `datos/conclusiones.json` quedaron del diseño anterior, con
+una conclusión redactada a mano por mes × segmento. **Ya no se embeben en la
+página** y están desactualizados a propósito: son la base del panel en vivo que
+quedó pendiente para cuando haya cuenta de API. Si alguna vez se retoman, el
+script vuelca en `_pendientes.json` los resúmenes que faltan y los textos se
+cargan con `python conclusiones.py --cargar <archivo>`.
 
 `procesar_tbm.py` sin argumentos relee todo `datos/*.pdf`. Con un archivo suelto
 como argumento procesa solo ese y lo **mezcla** con el histórico existente, no
