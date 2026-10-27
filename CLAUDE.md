@@ -44,7 +44,9 @@ haberse movido.
   cambio hecho ahí se pierde en el próximo procesamiento.
 - `estable.html` es una copia congelada que sirve de referencia. No se regenera.
 - Arriba de todo va el bloque **"Peso en la red John Deere"** (`pintarRed`), en
-  verde sólido para que se lea como titular. Es un dato **derivado**, no sale
+  verde sólido para que se lea como titular. Encadena tres lecturas: la cuota
+  de John Deere sobre la industria, cuánto de esa cuota aporta el concesionario
+  y qué proporción de la red representa. Es un dato **derivado**, no sale
   del informe: `JD = industria − marca − competidores`, y el resto de la red es
   eso menos el concesionario. En el AOR da cero (es el único concesionario JD
   de su zona), por eso solo se muestran Territorio y País. Siempre tiene que

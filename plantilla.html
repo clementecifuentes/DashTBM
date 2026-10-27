@@ -166,8 +166,18 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--jd);outline-of
   margin:3px 0 1px;font-variant-numeric:tabular-nums;
   animation:subeNumero .42s cubic-bezier(.22,.7,.3,1) both}
 .red-c .u{font-size:.74rem;opacity:.85;font-variant-numeric:tabular-nums}
-.red-c .d{font-size:.76rem;font-weight:700;margin-top:5px;font-variant-numeric:tabular-nums}
-.red-c .d.sube{color:#bdf5b0} .red-c .d.baja{color:#ffc2c2} .red-c .d.igual{opacity:.75}
+.red-filas{margin-top:9px;padding-top:8px;border-top:1px solid rgba(255,255,255,.18)}
+.red-f{display:flex;align-items:baseline;gap:8px;font-size:.79rem;margin-top:5px}
+.red-f .r{flex:1;min-width:0;opacity:.9;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap}
+.red-f .v{font-weight:700;font-variant-numeric:tabular-nums}
+.red-f .d{font-size:.72rem;font-weight:700;font-variant-numeric:tabular-nums;
+  min-width:62px;text-align:right}
+.red-x{font-size:.69rem;opacity:.72;margin:1px 0 0}
+.red-c .n .dn{font-size:.76rem;font-weight:700;letter-spacing:0;margin-left:6px;
+  vertical-align:middle}
+.red-c .dn.sube{color:#bdf5b0} .red-c .dn.baja{color:#ffc2c2} .red-c .dn.igual{opacity:.7}
+.red-c .d.sube{color:#bdf5b0} .red-c .d.baja{color:#ffc2c2} .red-c .d.igual{opacity:.7}
 .red-pie{margin-top:11px;font-size:.69rem;opacity:.78;line-height:1.5}
 .red-pie b{font-weight:700}
 
@@ -586,8 +596,11 @@ function redJD(tabla, col){
   // colas (54 - 11 - 12 da 30,999...) que se imprimen como "31,0" en vez de 31.
   const r1 = function(x){ return Math.round(x * 10) / 10; };
   const jd = r1(ind - (vv("marca") || 0) - comp);
-  if(!(jd > 0) || dea > jd + 0.05) return null;   // sin sentido: no se muestra
-  return {jd:jd, ceto:dea, resto:r1(jd - dea), pc:dea/jd*100};
+  if(!(jd > 0) || !(ind > 0) || dea > jd + 0.05) return null;  // sin sentido
+  return {ind:ind, jd:jd, ceto:dea, resto:r1(jd - dea),
+          jdPc:  jd/ind*100,    // cuanto del mercado es John Deere
+          cetoPc:dea/ind*100,   // cuanto del mercado es el concesionario
+          pc:    dea/jd*100};   // cuanto de la red es el concesionario
 }
 
 function pintarRed(){
@@ -597,21 +610,43 @@ function pintarRed(){
   const act = (mes.segmentos[seg]||{}).FYTD, ant = (mes.segmentos[seg]||{}).LFYTD;
   const campos = [["TERRITORIO","En el territorio"], ["PAIS","En el país"]];
 
+  // Tres lecturas encadenadas: cuanto del mercado es John Deere, cuanto es el
+  // concesionario, y que proporcion de la red representa. La segunda es parte
+  // de la primera, de ahi el "de esos N puntos".
+  const fila = function(rot, hoy, antes, dec, extra){
+    let d = "";
+    if(antes != null){
+      const v = hoy - antes;
+      const cl = Math.abs(v)<0.05 ? "igual" : (v>0 ? "sube" : "baja");
+      const fl = Math.abs(v)<0.05 ? "=" : (v>0 ? "▲" : "▼");
+      d = '<span class="d '+cl+'">'+fl+' '+(v>0?"+":"")+num(v,dec)+' pp</span>';
+    }
+    return '<div class="red-f"><span class="r">'+rot+'</span>'
+         + '<span class="v">'+num(hoy,dec)+'%</span>'+d+'</div>'
+         + (extra ? '<div class="red-x">'+extra+'</div>' : "");
+  };
+
   const cols = campos.map(function(c){
     const a = redJD(act, c[0]), b = redJD(ant, c[0]);
     if(!a) return null;
-    let delta = "";
+    // El titular es la cuota de John Deere, con su propia variacion al lado.
+    // Abajo, las dos lecturas del concesionario dentro de esa cuota.
+    let dJd = "";
     if(b){
-      const d = a.pc - b.pc;
-      const cl = Math.abs(d)<0.05 ? "igual" : (d>0 ? "sube" : "baja");
-      const fl = Math.abs(d)<0.05 ? "=" : (d>0 ? "▲" : "▼");
-      delta = '<div class="d '+cl+'">'+fl+' '+(d>0?"+":"")+num(d,1)
-            + ' pp <span style="font-weight:400;opacity:.8">contra '+num(b.pc,1)+'% del año pasado</span></div>';
+      const v = a.jdPc - b.jdPc;
+      const cl = Math.abs(v)<0.05 ? "igual" : (v>0 ? "sube" : "baja");
+      const fl = Math.abs(v)<0.05 ? "=" : (v>0 ? "▲" : "▼");
+      dJd = ' <span class="dn '+cl+'">'+fl+' '+(v>0?"+":"")+num(v,1)+' pp</span>';
     }
     return '<div class="red-c"><div class="q">'+esc(c[1])+'</div>'
-      + '<div class="n">'+num(a.pc,1)+'%</div>'
-      + '<div class="u">'+uni(a.ceto)+' de '+uni(a.jd)+' unidades John Deere</div>'
-      + delta + '</div>';
+      + '<div class="n">'+num(a.jdPc,1)+'%'+dJd+'</div>'
+      + '<div class="u">del mercado es John Deere · '+uni(a.jd)+' de '+uni(a.ind)+' unidades</div>'
+      + '<div class="red-filas">'
+        + fila(esc(mes.dealer), a.cetoPc, b ? b.cetoPc : null, 2,
+               "aporta "+num(a.cetoPc,2)+" de esos "+num(a.jdPc,1)+" puntos")
+        + fila("Peso en la red", a.pc, b ? b.pc : null, 1,
+               uni(a.ceto)+" de "+uni(a.jd)+" unidades John Deere")
+      + '</div></div>';
   }).filter(Boolean);
 
   if(!cols.length){ cont.innerHTML=""; return; }
