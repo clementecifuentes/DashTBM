@@ -1288,7 +1288,13 @@ function pintarFichas(){
   if(!E || !E.length){ cont.innerHTML=""; return; }
 
   const seg = S.seg;
-  const dealerNom = APP.meses[S.clave].dealer;
+  // El nombre tiene que ser el del periodo que se esta mostrando, no el del
+  // informe elegido arriba: los dos selectores son independientes, y la razon
+  // social cambio en el medio de la serie (Rural Ceres S.A. -> Cetomaq24 Sa).
+  // Tomandolo de S.clave, elegir un informe viejo atribuia a la razon social
+  // anterior numeros que son de la actual.
+  const ultimo = E[E.length - 1].clave;
+  const dealerNom = (APP.meses[ultimo] || APP.meses[S.clave]).dealer;
   const claves = E.map(function(p){ return p.clave; });
   const clavesAnt = claves.map(unAnioAntes);
   const todos = ejeCompleto().map(function(p){ return p.clave; });
