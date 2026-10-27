@@ -43,6 +43,12 @@ haberse movido.
 - El diseño se edita en `plantilla.html`. `index.html` es **generado**: cualquier
   cambio hecho ahí se pierde en el próximo procesamiento.
 - `estable.html` es una copia congelada que sirve de referencia. No se regenera.
+- Arriba de todo va el bloque **"Peso en la red John Deere"** (`pintarRed`), en
+  verde sólido para que se lea como titular. Es un dato **derivado**, no sale
+  del informe: `JD = industria − marca − competidores`, y el resto de la red es
+  eso menos el concesionario. En el AOR da cero (es el único concesionario JD
+  de su zona), por eso solo se muestran Territorio y País. Siempre tiene que
+  decir que es derivado.
 - El panel de conclusión va **a la derecha de la ficha** y se calcula en el
   navegador (`puntosFicha`), con los números que `cifras()` ya computó para el
   cuadro. Nunca recalcular por separado: si los dos hicieran la cuenta por su
@@ -59,6 +65,14 @@ haberse movido.
 - **Las columnas cambian de un informe a otro.** El reporte omite las categorías
   que están en cero y los límites de clase se movieron con los años, así que el
   encabezado de cada tabla se lee de verdad y se normaliza a una clave canónica.
+- **En el AOR la suma cierra: dealer + marca + competidores = industria.** Eso
+  es lo que permite despejar John Deere, y significa que `Competitors` son
+  todas las marcas que no son JD ni la marca listada (Pauny, que solo aparece
+  en tractores). En Territorio y País la suma NO cierra, y el faltante es el
+  resto de la red JD. Si Deere alguna vez dejara una marca afuera de
+  `Competitors`, el número derivado se iría sin que nada falle: por eso
+  `verificar_red()` exige que la red despejada no sea negativa ni menor que el
+  propio concesionario.
 - **Las unidades del dealer nunca se recalculan; las de la industria sí.** El AOR
   de la industria de FY25 quedó reexpresado para arriba entre un 7% y un 23%
   respecto de lo que se había publicado en su momento. El País no se toca (0,0%).

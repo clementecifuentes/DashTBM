@@ -240,6 +240,30 @@ otro informe así, se agrega ahí siguiendo el mismo formato.
 | `datos/manual/` | Transcripción de los informes sin capa de texto |
 | `datos/*.pdf` | Reportes originales (no se suben al repo) |
 
+## Peso en la red John Deere
+
+Arriba de todo, un bloque muestra cuánto pesa el concesionario dentro de la red
+JD, en el territorio y en el país, contra el mismo momento del año anterior.
+
+El informe no trae una fila "John Deere", pero se puede despejar. En el AOR la
+suma `dealer + marca + competidores` da **exactamente** la industria, en las 92
+tablas sin excepción: eso prueba que `Competitors` son todas las marcas que no
+son JD ni la marca listada. Entonces:
+
+```
+John Deere total   = industria − marca − competidores
+resto de la red JD = John Deere total − concesionario
+```
+
+En el AOR el resto da cero, porque el concesionario es el único de la red en su
+zona; por eso solo se muestran Territorio y País. Sobre los 23 meses, los dos
+segmentos y los dos períodos, las 184 combinaciones dan valores posibles.
+
+Es un **dato derivado y la página lo aclara**. Si Deere alguna vez dejara una
+marca afuera de `Competitors`, el número se iría sin que nada falle, así que
+`verificar_red()` controla que la red despejada no quede negativa ni por debajo
+de lo que vende el propio concesionario.
+
 ## Validaciones automáticas
 
 `procesar_tbm.py` avisa por consola y en la propia página si:

@@ -341,6 +341,42 @@ def verificar(d):
                            % (d["clave"], nom_seg, periodo, clave, suma, real))
 
 
+def verificar_red(d):
+    """El John Deere que se despeja tiene que tener sentido.
+
+    La pagina muestra el peso del concesionario dentro de la red JD, y lo saca
+    restando: JD = industria - marca - competidores. Eso se apoya en que
+    'Competitors' sean TODAS las marcas que no son JD ni la marca listada, cosa
+    que en el AOR se verifica sola (ahi la suma cierra exacta y verificar() ya
+    lo controla). En TERRITORIO y PAIS no hay forma de comprobarlo, asi que al
+    menos se exige que el resultado no sea absurdo: la red no puede vender
+    menos que cero ni menos que el propio concesionario. Si algun mes Deere
+    cambia como arma las filas, esto avisa en vez de publicar un porcentaje
+    inventado.
+    """
+    for nom_seg, seg in d["segmentos"].items():
+        for periodo, tabla in seg.items():
+            cols = tabla["columnas"]
+
+            def val(tipo, clave):
+                f = next((x for x in tabla["filas"] if x["tipo"] == tipo), None)
+                return f["valores"][cols.index(clave)] if f and clave in cols else None
+
+            for clave in ("TERRITORIO", "PAIS"):
+                ind, comp = val("industria", clave), val("competidores", clave)
+                dealer, marca = val("dealer", clave), val("marca", clave)
+                if ind is None or comp is None or dealer is None:
+                    continue
+                jd = ind - (marca or 0) - comp
+                if jd < 0:
+                    avisar("%s %s/%s %s: la red JD despejada da %.1f, negativo"
+                           % (d["clave"], nom_seg, periodo, clave, jd))
+                elif dealer > jd + 0.05:
+                    avisar("%s %s/%s %s: el concesionario (%.1f) vende mas que "
+                           "toda la red JD despejada (%.1f)"
+                           % (d["clave"], nom_seg, periodo, clave, dealer, jd))
+
+
 def verificar_cruzado(historico):
     """Controles que solo se pueden hacer con varios meses cargados.
 
@@ -496,6 +532,7 @@ def main():
                   % os.path.basename(ruta))
             continue
         verificar(d)
+        verificar_red(d)
         historico[d["clave"]] = d
         print("  OK -> %s | %s | %s" % (d["mes_es"], d["dealer"], d["fy"]))
 
@@ -504,6 +541,7 @@ def main():
         with open(ruta, encoding="utf-8") as fh:
             d = json.load(fh)
         verificar(d)
+        verificar_red(d)
         historico[d["clave"]] = d
         print("  OK -> %s | %s | transcripcion manual" % (d["mes_es"], d["dealer"]))
 

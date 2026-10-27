@@ -146,6 +146,31 @@ select:focus-visible,button:focus-visible{outline:2px solid var(--jd);outline-of
 
 /* ---------- tablas ---------- */
 /* ---------- fichas de cabecera ---------- */
+/* Peso en la red JD. Va en verde solido y no en blanco como las fichas, porque
+   es lo primero de la pagina y tiene que leerse como titular, no como una
+   tarjeta mas. El dato es DERIVADO, no sale del informe: de ahi la nota al pie. */
+.red{background:linear-gradient(100deg,var(--jd-osc) 0%,var(--jd) 55%,var(--jd-osc) 100%);
+  color:#fff;border-radius:9px;box-shadow:var(--sombra);
+  padding:15px 20px 16px;margin:26px 0 0;max-width:780px}
+.red-cab{display:flex;align-items:baseline;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.red-cab b{font-size:.78rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.red-cab span{font-size:.74rem;opacity:.85}
+.red-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:560px){ .red-cols{grid-template-columns:1fr} }
+.red-c{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);
+  border-radius:7px;padding:11px 13px}
+.red-c .q{font-size:.68rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;opacity:.8}
+.red-c .n{font-size:1.62rem;font-weight:700;letter-spacing:-.02em;line-height:1.15;
+  margin:3px 0 1px;font-variant-numeric:tabular-nums;
+  animation:subeNumero .42s cubic-bezier(.22,.7,.3,1) both}
+.red-c .u{font-size:.74rem;opacity:.85;font-variant-numeric:tabular-nums}
+.red-c .d{font-size:.76rem;font-weight:700;margin-top:5px;font-variant-numeric:tabular-nums}
+.red-c .d.sube{color:#bdf5b0} .red-c .d.baja{color:#ffc2c2} .red-c .d.igual{opacity:.75}
+.red-pie{margin-top:11px;font-size:.69rem;opacity:.78;line-height:1.5}
+.red-pie b{font-weight:700}
+
 /* La ficha mantiene su ancho y la conclusion ocupa el hueco que quedaba libre
    a su derecha. Ancho fijo y no minmax(0,780px): esa variante ya nos colapso
    una columna a cero. Abajo de 1100px se apilan. */
@@ -389,6 +414,8 @@ footer{margin-top:52px;padding-top:15px;border-top:1px solid var(--line);
 <div class="wrap">
   <div id="avisos"></div>
 
+  <div id="red"></div>
+
   <div class="fichas" id="fichas"></div>
 
   <section>
@@ -535,6 +562,66 @@ function pintarTablas(){
     th.onclick = function(){
       S.col = (S.col===th.dataset.col) ? null : th.dataset.col; pintarTablas(); };
   });
+}
+
+/* ==================== peso en la red John Deere ====================
+   El informe no trae una fila "John Deere", pero se puede despejar: en el AOR
+   la suma dealer + Pauny + competidores da exactamente la industria, asi que
+   Competitors son todas las marcas que no son JD ni Pauny. Entonces
+
+       JD total = industria - Pauny - competidores
+       resto de la red JD = JD total - Cetomaq
+
+   En el AOR eso da cero (Cetomaq es el unico concesionario JD de su zona), por
+   eso solo se muestran Territorio y Pais. OJO: es un dato DERIVADO. Si Deere
+   alguna vez dejara una marca afuera de Competitors, el numero se iria sin que
+   nada falle; por eso procesar_tbm.py controla que la identidad del AOR siga
+   cerrando y avisa si deja de hacerlo. */
+function redJD(tabla, col){
+  if(!tabla) return null;
+  const vv = function(tipo){ return valInf(tabla, tipo, col); };
+  const ind = vv("industria"), comp = vv("competidores"), dea = vv("dealer");
+  if(ind==null || comp==null || dea==null) return null;
+  // Redondeo a un decimal: el informe trae un decimal, y restar flotantes deja
+  // colas (54 - 11 - 12 da 30,999...) que se imprimen como "31,0" en vez de 31.
+  const r1 = function(x){ return Math.round(x * 10) / 10; };
+  const jd = r1(ind - (vv("marca") || 0) - comp);
+  if(!(jd > 0) || dea > jd + 0.05) return null;   // sin sentido: no se muestra
+  return {jd:jd, ceto:dea, resto:r1(jd - dea), pc:dea/jd*100};
+}
+
+function pintarRed(){
+  const cont = document.getElementById("red");
+  if(!cont) return;
+  const mes = APP.meses[S.clave], seg = S.seg;
+  const act = (mes.segmentos[seg]||{}).FYTD, ant = (mes.segmentos[seg]||{}).LFYTD;
+  const campos = [["TERRITORIO","En el territorio"], ["PAIS","En el país"]];
+
+  const cols = campos.map(function(c){
+    const a = redJD(act, c[0]), b = redJD(ant, c[0]);
+    if(!a) return null;
+    let delta = "";
+    if(b){
+      const d = a.pc - b.pc;
+      const cl = Math.abs(d)<0.05 ? "igual" : (d>0 ? "sube" : "baja");
+      const fl = Math.abs(d)<0.05 ? "=" : (d>0 ? "▲" : "▼");
+      delta = '<div class="d '+cl+'">'+fl+' '+(d>0?"+":"")+num(d,1)
+            + ' pp <span style="font-weight:400;opacity:.8">contra '+num(b.pc,1)+'% del año pasado</span></div>';
+    }
+    return '<div class="red-c"><div class="q">'+esc(c[1])+'</div>'
+      + '<div class="n">'+num(a.pc,1)+'%</div>'
+      + '<div class="u">'+uni(a.ceto)+' de '+uni(a.jd)+' unidades John Deere</div>'
+      + delta + '</div>';
+  }).filter(Boolean);
+
+  if(!cols.length){ cont.innerHTML=""; return; }
+  cont.innerHTML = '<div class="red"><div class="red-cab">'
+    + '<b>Peso de '+esc(mes.dealer)+' en la red John Deere</b>'
+    + '<span>'+esc(SEG_ES[seg])+' · '+esc(mes.mes_es)+' · acumulado del año fiscal</span>'
+    + '</div><div class="red-cols">'+cols.join("")+'</div>'
+    + '<div class="red-pie"><b>Dato derivado</b>, no sale del informe: John Deere se '
+    + 'despeja como industria menos las otras marcas. En el AOR no se muestra porque '
+    + 'el concesionario es el único de la red.</div></div>';
 }
 
 /* ==================== conclusion de la ficha ====================
@@ -1493,6 +1580,7 @@ function render(){
     esc(mes.dealer)+' · '+esc(mes.mes_es)+' <span class="fy">'+esc(mes.fy)+'</span>'
     + dolarHoy();
   document.title = "TBM "+mes.dealer+" — "+mes.mes_es;
+  pintarRed();
   pintarFichas();
   pintarTablas();
   document.getElementById("pie").innerHTML =
@@ -1542,7 +1630,7 @@ function init(){
     b.onclick=function(){ S.seg=b.dataset.seg; S.col=null;
       document.querySelectorAll("#segmento button").forEach(function(o){
         o.setAttribute("aria-pressed", String(o===b)); });
-      pintarFichas(); pintarTablas(); }; });
+      pintarRed(); pintarFichas(); pintarTablas(); }; });
 
   if(APP.avisos && APP.avisos.length)
     document.getElementById("avisos").innerHTML=
